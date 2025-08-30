@@ -3,6 +3,7 @@ import { DataSource } from 'typeorm';
 import User from '../models/user.model';
 import { config } from './env';
 import Address from '../models/address.model';
+import { Category } from '../models/category.model';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -11,7 +12,7 @@ export const AppDataSource = new DataSource({
   username: config.pg.user,
   password: config.pg.password,
   database: config.pg.database,
-  entities: [User, Address],
+  entities: [User, Address, Category],
   synchronize: true,
   logging: false,
 });
