@@ -13,8 +13,15 @@ export interface IProductService {
     page: number,
     limit: number,
   ): Promise<PaginatedProductsResponseDto>;
-  getProductsByCategoryId(
+  searchProducts(
+    search: string,
+    page: number,
+    limit: number,
+  ): Promise<PaginatedProductsResponseDto>;
+  filterProducts(
     categoryId: string,
+    sort: string,
+    sortBy: string,
     page: number,
     limit: number,
   ): Promise<PaginatedProductsResponseDto>;

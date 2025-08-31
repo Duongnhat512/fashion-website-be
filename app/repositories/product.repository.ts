@@ -1,5 +1,5 @@
 import { Product } from '../models/product.model';
-import { Repository } from 'typeorm';
+import { Like, Repository } from 'typeorm';
 import { AppDataSource } from '../config/data-source';
 import {
   PaginatedProductsResponseDto,
@@ -79,13 +79,15 @@ export class ProductRepository {
     };
   }
 
-  async getProductsByCategoryId(
-    categoryId: string,
+  async searchProducts(
+    search: string,
     page: number = 1,
     limit: number = 10,
   ): Promise<PaginatedProductsResponseDto> {
     const [products, total] = await this.productRepository.findAndCount({
-      where: { category: { id: categoryId } },
+      where: { name: Like(`%${search}%`) },
+      skip: (page - 1) * limit,
+      take: limit,
       relations: {
         variants: {
           color: true,
@@ -93,6 +95,51 @@ export class ProductRepository {
         category: true,
       },
     });
+    return {
+      products: products.map((product) => ({
+        ...product,
+        categoryId: product.category?.id,
+        category: undefined,
+      })),
+      pagination: {
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasNext: page * limit < total,
+        hasPrev: page > 1,
+        page,
+        limit,
+      },
+    };
+  }
+
+  async filterProducts(
+    categoryId: string,
+    sort: string = 'desc',
+    sortBy: string = 'createdAt',
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<PaginatedProductsResponseDto> {
+    let where: any = {};
+
+    if (categoryId) {
+      where.category = { id: categoryId };
+    }
+
+    const [products, total] = await this.productRepository.findAndCount({
+      where: where,
+      skip: (page - 1) * limit,
+      take: limit,
+      relations: {
+        variants: {
+          color: true,
+        },
+        category: true,
+      },
+      order: {
+        [sortBy]: sort.toUpperCase() === 'DESC' ? 'DESC' : 'ASC',
+      },
+    });
+
     return {
       products: products.map((product) => ({
         ...product,

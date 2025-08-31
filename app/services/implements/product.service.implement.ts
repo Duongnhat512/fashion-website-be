@@ -27,13 +27,26 @@ export class ProductService implements IProductService {
   ): Promise<PaginatedProductsResponseDto> {
     return this.productRepository.getAllProducts(page, limit);
   }
-  getProductsByCategoryId(
-    categoryId: string,
+
+  async searchProducts(
+    search: string,
     page: number = 1,
     limit: number = 10,
   ): Promise<PaginatedProductsResponseDto> {
-    return this.productRepository.getProductsByCategoryId(
+    return this.productRepository.searchProducts(search, page, limit);
+  }
+
+  async filterProducts(
+    categoryId: string,
+    sort: string = 'desc',
+    sortBy: string = 'createdAt',
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<PaginatedProductsResponseDto> {
+    return this.productRepository.filterProducts(
       categoryId,
+      sort,
+      sortBy,
       page,
       limit,
     );
