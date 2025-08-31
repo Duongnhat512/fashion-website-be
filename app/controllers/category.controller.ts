@@ -31,12 +31,14 @@ export class CategoryController {
   }
 
   async delete(req: Request, res: Response): Promise<void> {
-    await this.categoryService.delete(req.params.id);
+    const { id } = req.params;
+    await this.categoryService.delete(id);
     res.status(200).json(ApiResponse.success('Delete category'));
   }
 
   async getById(req: Request, res: Response): Promise<void> {
-    const category = await this.categoryService.getById(req.params.id);
+    const { id } = req.params;
+    const category = await this.categoryService.getById(id);
     res.status(200).json(ApiResponse.success('Get category by id', category));
   }
 
