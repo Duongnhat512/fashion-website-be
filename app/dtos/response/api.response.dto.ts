@@ -1,16 +1,11 @@
 import { BaseResponseDto, MetaDto, ValidationErrorDto } from './response.dto';
 
 export class ApiResponse {
-  static success<T>(
-    message: string,
-    data?: T,
-    meta?: MetaDto,
-  ): BaseResponseDto<T> {
+  static success<T>(message: string, data?: T): BaseResponseDto<T> {
     return {
       success: true,
       message,
       data,
-      meta,
     };
   }
 

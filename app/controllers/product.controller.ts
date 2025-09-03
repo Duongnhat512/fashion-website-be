@@ -2,6 +2,9 @@ import { Request, Response } from 'express';
 import { IProductService } from '../services/product.service.interface';
 import { ApiResponse } from '../dtos/response/api.response.dto';
 import { ProductService } from '../services/implements/product.service.implement';
+import { ProductRequestDto } from '../dtos/request/product/product.request';
+import { validate } from 'class-validator';
+import { ValidationErrorDto } from '../dtos/response/response.dto';
 
 export class ProductController {
   private readonly productService: IProductService;
@@ -31,6 +34,7 @@ export class ProductController {
       Number(page),
       Number(limit),
     );
+    res.status(200).json(ApiResponse.success('Search products', products));
   }
 
   async filterProducts(req: Request, res: Response) {
@@ -49,5 +53,35 @@ export class ProductController {
       Number(limit),
     );
     res.status(200).json(ApiResponse.success('Filter products', products));
+  }
+
+  async createProduct(req: Request, res: Response) {
+    try {
+      const createProductDto = new ProductRequestDto();
+      Object.assign(createProductDto, req.body);
+
+      const errors = await validate(createProductDto);
+
+      if (errors.length > 0) {
+        const validationErrors: ValidationErrorDto[] = errors.map((error) => ({
+          field: error.property,
+          message: Object.values(error.constraints || {}),
+        }));
+
+        res.status(400).json(ApiResponse.validationError(validationErrors));
+        return;
+      }
+      const product = await this.productService.createProduct(createProductDto);
+      res.status(200).json(ApiResponse.success('Create product', product));
+    } catch (error) {
+      res.status(500).json(
+        ApiResponse.error('Create product', [
+          {
+            message: 'Create product failed',
+            field: 'createProduct',
+          },
+        ]),
+      );
+    }
   }
 }

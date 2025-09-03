@@ -2,9 +2,9 @@ import {
   PaginatedProductsResponseDto,
   ProductResponseDto,
 } from '../../dtos/response/product/product.response';
-import { Product } from '../../models/product.model';
 import { ProductRepository } from '../../repositories/product.repository';
 import { IProductService } from '../product.service.interface';
+import { ProductRequestDto } from '../../dtos/request/product/product.request';
 
 export class ProductService implements IProductService {
   private readonly productRepository: ProductRepository;
@@ -12,7 +12,7 @@ export class ProductService implements IProductService {
   constructor() {
     this.productRepository = new ProductRepository();
   }
-  updateProduct(product: Product): Promise<ProductResponseDto> {
+  updateProduct(product: ProductRequestDto): Promise<ProductResponseDto> {
     throw new Error('Method not implemented.');
   }
   deleteProduct(id: string): Promise<void> {
@@ -52,7 +52,7 @@ export class ProductService implements IProductService {
     );
   }
 
-  async createProduct(product: Product): Promise<ProductResponseDto> {
+  async createProduct(product: ProductRequestDto): Promise<ProductResponseDto> {
     return this.productRepository.createProduct(product);
   }
 }

@@ -1,4 +1,5 @@
 import { ColorResponseDto } from '../color/color.response';
+import { PaginationResponseDto } from '../pagination.response.dto';
 
 export class VariantResponseDto {
   id: string;
@@ -11,4 +12,9 @@ export class VariantResponseDto {
   imageUrl: string;
   onSales: boolean;
   saleNote: string;
+}
+
+export class PaginatedVariantsResponseDto {
+  variants: VariantResponseDto[];
+  pagination: PaginationResponseDto;
 }

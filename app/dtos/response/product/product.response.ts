@@ -1,3 +1,4 @@
+import { PaginationResponseDto } from '../pagination.response.dto';
 import { VariantResponseDto } from '../variant/variant.response';
 
 export class ProductResponseDto {
@@ -15,16 +16,7 @@ export class ProductResponseDto {
   variants: VariantResponseDto[];
 }
 
-export class PaginationDto {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-  hasNext: boolean;
-  hasPrev: boolean;
-}
-
 export class PaginatedProductsResponseDto {
   products: ProductResponseDto[];
-  pagination: PaginationDto;
+  pagination: PaginationResponseDto;
 }

@@ -35,6 +35,9 @@ export class Variant {
   @Column({ type: 'float', name: 'discount_price' })
   discountPrice!: number;
 
+  @Column({ type: 'float', name: 'discount_percent', default: 0 })
+  discountPercent!: number;
+
   @Column({ type: 'int' })
   stock!: number;
 
