@@ -5,6 +5,8 @@ import cors from 'cors';
 import morgan from 'morgan';
 import userRouter from './routers/user.router';
 import { AppDataSource } from './config/data-source';
+import categoryRouter from './routers/category.route';
+import productRouter from './routers/product.route';
 
 const app: Application = express();
 
@@ -37,5 +39,7 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api/v1/users', userRouter);
+app.use('/api/v1/categories', categoryRouter);
+app.use('/api/v1/products', productRouter);
 
 export default app;
