@@ -4,7 +4,7 @@ import {
 } from '../dtos/response/category/category.response';
 import { Category } from '../models/category.model';
 import { IsNull, Repository } from 'typeorm';
-import { AppDataSource } from '../config/data-source';
+import { AppDataSource } from '../config/data_source';
 
 export class CategoryRepository {
   private readonly categoryRepository: Repository<Category>;

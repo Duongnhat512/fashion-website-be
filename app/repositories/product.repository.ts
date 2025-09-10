@@ -1,6 +1,6 @@
 import { Product } from '../models/product.model';
 import { Like, Repository } from 'typeorm';
-import { AppDataSource } from '../config/data-source';
+import { AppDataSource } from '../config/data_source';
 import {
   PaginatedProductsResponseDto,
   ProductResponseDto,

@@ -26,4 +26,13 @@ export const config = {
   jwtAccessTokenExpiresIn:
     (process.env.JWT_ACCESS_TOKEN_EXPIRES_IN as StringValue) || '15d',
   secretToken: process.env.SECRET_TOKEN,
+  email: {
+    user: process.env.GOOGLE_SENDER,
+    password: process.env.GOOGLE_PASSWORD,
+  },
+  redis: {
+    host: process.env.REDIS_HOST || 'localhost',
+    port: Number(process.env.REDIS_PORT) || 6379,
+    password: process.env.REDIS_PASSWORD || 'redis123',
+  },
 };
