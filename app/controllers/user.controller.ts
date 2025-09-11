@@ -20,7 +20,6 @@ export class UserController {
     try {
       const createUserDto = new CreateUserRequestDto();
       Object.assign(createUserDto, req.body);
-
       const errors = await validate(createUserDto);
       if (errors.length > 0) {
         const validationErrors: ValidationErrorDto[] = errors.map((error) => ({
@@ -41,7 +40,13 @@ export class UserController {
         return;
       }
 
-      res.status(500).json(ApiResponse.serverError());
+      res
+        .status(500)
+        .json(
+          ApiResponse.serverError(
+            error instanceof Error ? error.message : 'Lỗi server',
+          ),
+        );
     }
   };
 

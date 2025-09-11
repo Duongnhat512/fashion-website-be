@@ -48,7 +48,6 @@ export class EmailService implements IEmailService {
       const html = template(data);
 
       return html;
-      console.log(html);
     } catch (error) {
       throw new Error('Failed to read HTML template');
     }

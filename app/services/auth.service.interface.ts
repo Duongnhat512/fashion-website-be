@@ -7,7 +7,8 @@ import { LoginUserResponseDto } from '../dtos/response/user /user.response.dto';
 export interface IAuthService {
   generateRefreshToken(tokenPayload: TokenPayloadDto): string;
   login(loginDto: LoginRequestDto): Promise<LoginUserResponseDto>;
-  sendOtp(email: string): Promise<any>;
   generateAccessToken(payload: TokenPayloadDto): string;
   refreshAccessToken(refreshToken: string): Promise<AuthResponseDto>;
+  generateVerificationToken(email: string): string;
+  validateVerificationToken(token: string): { email: string } | null;
 }

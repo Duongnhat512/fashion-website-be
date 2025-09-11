@@ -38,6 +38,12 @@ export class UserService implements IUserService {
     if (userExist) {
       throw new Error('User already exists');
     }
+    const verificationToken = this.authService.validateVerificationToken(
+      createUserDto.verificationToken,
+    );
+    if (!verificationToken) {
+      throw new Error('Token xác thực không hợp lệ hoặc đã hết hạn');
+    }
 
     const passwordHash = await bcrypt.hash(
       createUserDto.password,

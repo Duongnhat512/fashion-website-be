@@ -17,8 +17,25 @@ export class AuthService implements IAuthService {
     this.userRepository = new UserRepository();
   }
 
-  sendOtp(email: string): Promise<any> {
-    throw new Error('Method not implemented.');
+  generateVerificationToken(email: string): string {
+    const payload = {
+      email,
+      type: 'email_verification',
+      iat: Math.floor(Date.now() / 1000),
+    };
+    return jwt.sign(payload, config.secretToken!, { expiresIn: '10m' });
+  }
+
+  validateVerificationToken(token: string): { email: string } | null {
+    try {
+      const decoded = jwt.verify(token, config.secretToken!) as any;
+      if (decoded.type === 'email_verification') {
+        return { email: decoded.email };
+      }
+      return null;
+    } catch (error) {
+      return null;
+    }
   }
 
   async login(loginDto: LoginRequestDto): Promise<LoginUserResponseDto> {

@@ -85,10 +85,21 @@ export class AuthController {
   verifyOtp = async (req: Request, res: Response): Promise<void> => {
     const { email, otp } = req.body;
     try {
-      const result = await this.otpService.verifyOtp(email, otp);
-      res
-        .status(200)
-        .json(ApiResponse.success('Mã OTP đã được xác thực', result));
+      const isValidOtp = await this.otpService.verifyOtp(email, otp);
+
+      if (!isValidOtp) {
+        res.status(400).json(ApiResponse.error('Mã OTP không hợp lệ'));
+        return;
+      }
+
+      const verificationToken =
+        this.authService.generateVerificationToken(email);
+
+      res.status(200).json(
+        ApiResponse.success('Mã OTP đã được xác thực', {
+          verificationToken,
+        }),
+      );
     } catch (error) {
       res.status(500).json(ApiResponse.error('Lỗi khi xác thực OTP'));
     }
