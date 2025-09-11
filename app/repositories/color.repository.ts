@@ -1,6 +1,6 @@
 import { Repository } from 'typeorm';
 import { Color } from '../models/color.model';
-import { AppDataSource } from '../config/data-source';
+import { AppDataSource } from '../config/data_source';
 
 export class ColorRepository {
   private readonly colorRepository: Repository<Color>;

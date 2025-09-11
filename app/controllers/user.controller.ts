@@ -20,7 +20,6 @@ export class UserController {
     try {
       const createUserDto = new CreateUserRequestDto();
       Object.assign(createUserDto, req.body);
-
       const errors = await validate(createUserDto);
       if (errors.length > 0) {
         const validationErrors: ValidationErrorDto[] = errors.map((error) => ({
@@ -41,33 +40,13 @@ export class UserController {
         return;
       }
 
-      res.status(500).json(ApiResponse.serverError());
-    }
-  };
-
-  login = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const loginDto = new LoginRequestDto();
-      Object.assign(loginDto, req.body);
-
-      const errors = await validate(loginDto);
-      if (errors.length > 0) {
-        const validationErrors: ValidationErrorDto[] = errors.map((error) => ({
-          field: error.property,
-          message: Object.values(error.constraints || {}),
-        }));
-
-        res.status(400).json(ApiResponse.validationError(validationErrors));
-        return;
-      }
-
-      const result = await this.userService.login(loginDto);
-
-      res.status(200).json(ApiResponse.success('Đăng nhập thành công', result));
-    } catch (error) {
       res
         .status(500)
-        .json(ApiResponse.error('Thông tin đăng nhập không chính xác.'));
+        .json(
+          ApiResponse.serverError(
+            error instanceof Error ? error.message : 'Lỗi server',
+          ),
+        );
     }
   };
 

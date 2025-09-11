@@ -22,8 +22,8 @@ export class Color {
   @Column({ type: 'varchar', length: 255 })
   hex!: string;
 
-  @Column({ name: 'image_url' })
-  imageUrl!: string;
+  @Column({ name: 'image_url', nullable: true })
+  imageUrl: string = '';
 
   @Column({ type: 'varchar', length: 255, default: 'active' })
   status!: string;

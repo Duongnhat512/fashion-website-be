@@ -4,13 +4,16 @@ import bodyParser from 'body-parser';
 import cors from 'cors';
 import morgan from 'morgan';
 import userRouter from './routers/user.router';
-import { AppDataSource } from './config/data-source';
+import { AppDataSource } from './config/data_source';
 import categoryRouter from './routers/category.route';
 import productRouter from './routers/product.route';
+import authRouter from './routers/auth.route';
+import { initRedis } from './config/redis.config';
 
 const app: Application = express();
 
 initPg();
+initRedis();
 
 AppDataSource.initialize()
   .then(() => {
@@ -37,6 +40,8 @@ app.use(
 app.get('/', (req, res) => {
   res.send('Hello World');
 });
+
+app.use('/api/v1/auth', authRouter);
 
 app.use('/api/v1/users', userRouter);
 app.use('/api/v1/categories', categoryRouter);

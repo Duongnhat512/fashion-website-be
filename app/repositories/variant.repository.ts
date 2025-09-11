@@ -1,6 +1,6 @@
 import { Repository } from 'typeorm';
 import { Variant } from '../models/variant.model';
-import { AppDataSource } from '../config/data-source';
+import { AppDataSource } from '../config/data_source';
 import {
   PaginatedVariantsResponseDto,
   VariantResponseDto,

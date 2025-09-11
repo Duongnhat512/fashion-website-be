@@ -9,8 +9,6 @@ router.post(
   router.post('/register', (req, res) => userController.createUser(req, res)),
 );
 
-router.get('/login', (req, res) => userController.login(req, res));
-
 router.get('/:id', (req, res) => userController.getUserById(req, res));
 
 export default router;

@@ -45,6 +45,10 @@ export class CreateUserRequestDto {
   @IsEnum(Role)
   @IsOptional()
   role?: Role;
+
+  @IsOptional()
+  @IsString()
+  verificationToken: string;
 }
 
 export class LoginRequestDto {

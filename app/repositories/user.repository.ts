@@ -1,5 +1,5 @@
 import { Repository } from 'typeorm';
-import { AppDataSource } from '../config/data-source';
+import { AppDataSource } from '../config/data_source';
 import User from '../models/user.model';
 
 export default class UserRepository {
