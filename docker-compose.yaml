@@ -12,15 +12,15 @@ services:
     ports:
       - 5432:5432
 
-  # redis-cache:
-  #   image: redis/redis-stack:6.2.6-v20
-  #   platform: linux/amd64
-  #   ports:
-  #     - "6379:6379"
-  #     - "8001:8001"
+  redis-cache:
+    image: redis/redis-stack:6.2.6-v20
+    platform: linux/amd64
+    ports:
+      - '6379:6379'
+      - '8001:8001'
 
-  # redis-queue:
-  #   image: redis:6.2-alpine
-  #   platform: linux/amd64
-  #   ports:
-  #     - "6380:6379"
+  redis-queue:
+    image: redis:6.2-alpine
+    platform: linux/amd64
+    ports:
+      - '6380:6379'

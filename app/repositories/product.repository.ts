@@ -52,6 +52,9 @@ export class ProductRepository {
     return {
       ...product,
       categoryId: product.category?.id,
+      brand: product.brand ?? '',
+      createdAt: product.createdAt,
+      updatedAt: product.updatedAt,
     };
   }
 
@@ -74,6 +77,7 @@ export class ProductRepository {
         ...product,
         categoryId: product.category?.id,
         category: undefined,
+        brand: product.brand ?? '',
       })),
       pagination: {
         total,
@@ -107,6 +111,7 @@ export class ProductRepository {
         ...product,
         categoryId: product.category?.id,
         category: undefined,
+        brand: product.brand ?? '',
       })),
       pagination: {
         total,
@@ -155,6 +160,7 @@ export class ProductRepository {
         ...product,
         categoryId: product.category?.id,
         category: undefined,
+        brand: product.brand ?? '',
       })),
       pagination: {
         total,
@@ -215,6 +221,7 @@ export class ProductRepository {
         ...product,
         categoryId: product.category?.id,
         category: undefined,
+        brand: product.brand ?? '',
       })),
       pagination: {
         total,
@@ -225,5 +232,25 @@ export class ProductRepository {
         limit,
       },
     };
+  }
+  async getProductEntityById(id: string): Promise<Product> {
+    const product = await this.productRepository.findOne({
+      where: { id },
+      relations: {
+        category: true,
+      },
+    });
+    if (!product) {
+      throw new Error('Product not found');
+    }
+    return product;
+  }
+
+  async getAllProductsForIndexing(): Promise<Product[]> {
+    return this.productRepository.find({
+      relations: {
+        category: true,
+      },
+    });
   }
 }

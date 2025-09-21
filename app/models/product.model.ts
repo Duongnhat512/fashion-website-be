@@ -31,7 +31,7 @@ export class Product {
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   @IsOptional()
-  brand: string;
+  brand?: string;
 
   @ManyToOne(() => Category, (category) => category.products)
   @JoinColumn({ name: 'category_id' })

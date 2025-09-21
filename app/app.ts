@@ -9,11 +9,22 @@ import categoryRouter from './routers/category.route';
 import productRouter from './routers/product.route';
 import authRouter from './routers/auth.route';
 import { initRedis } from './config/redis.config';
+import { initializeProductSearch } from './utils/initialize_search';
 
 const app: Application = express();
 
-initPg();
-initRedis();
+async function initializeApp() {
+  try {
+    await initPg();
+    await initRedis();
+    await initializeProductSearch();
+  } catch (error) {
+    console.error('Failed to initialize application:', error);
+    process.exit(1);
+  }
+}
+
+initializeApp();
 
 AppDataSource.initialize()
   .then(() => {
@@ -42,7 +53,6 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api/v1/auth', authRouter);
-
 app.use('/api/v1/users', userRouter);
 app.use('/api/v1/categories', categoryRouter);
 app.use('/api/v1/products', productRouter);

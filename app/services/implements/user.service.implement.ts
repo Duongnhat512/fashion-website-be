@@ -1,7 +1,13 @@
 import { config } from '../../config/env';
-import { CreateUserRequestDto } from '../../dtos/request/user/user.request.dto';
+import {
+  CreateUserRequestDto,
+  UpdateUserRequestDto,
+} from '../../dtos/request/user/user.request.dto';
 import { TokenPayloadDto } from '../../dtos/response/auth/auth.response.dto';
-import { GetUserResponseDto } from '../../dtos/response/user /user.response.dto';
+import {
+  GetUserResponseDto,
+  UpdateUserResponseDto,
+} from '../../dtos/response/user/user.response.dto';
 import Role from '../../models/enum/role.enum';
 import User from '../../models/user.model';
 import UserRepository from '../../repositories/user.repository';
@@ -16,6 +22,30 @@ export class UserService implements IUserService {
   constructor() {
     this.userRepository = new UserRepository();
     this.authService = new AuthService();
+  }
+  getAllUsers(): Promise<User[]> {
+    return this.userRepository.getAllUsers();
+  }
+  async updateUser(
+    updateUserDto: UpdateUserRequestDto,
+  ): Promise<UpdateUserResponseDto> {
+    const user = await this.userRepository.updateUser(updateUserDto);
+    if (!user) {
+      throw new Error('User not found');
+    }
+    return {
+      id: user.generatedMaps[0].id,
+      fullname: user.generatedMaps[0].fullname,
+      email: user.generatedMaps[0].email,
+      role: user.generatedMaps[0].role,
+    };
+  }
+  async deleteUser(id: string): Promise<void> {
+    const user = await this.userRepository.findById(id);
+    if (!user) {
+      throw new Error('User not found');
+    }
+    await this.userRepository.deleteUser(id);
   }
   async getUserById(id: string): Promise<GetUserResponseDto> {
     const user = await this.userRepository.findById(id);

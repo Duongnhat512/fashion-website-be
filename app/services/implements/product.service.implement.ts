@@ -5,23 +5,62 @@ import {
 import { ProductRepository } from '../../repositories/product.repository';
 import { IProductService } from '../product.service.interface';
 import { ProductRequestDto } from '../../dtos/request/product/product.request';
+import { RedisSearchService } from './redis_search.service.implement';
 
 export class ProductService implements IProductService {
   private readonly productRepository: ProductRepository;
+  private readonly redisSearchService: RedisSearchService;
 
   constructor() {
     this.productRepository = new ProductRepository();
+    this.redisSearchService = new RedisSearchService();
   }
-  updateProduct(product: ProductRequestDto): Promise<ProductResponseDto> {
-    throw new Error('Method not implemented.');
+
+  async createProduct(product: ProductRequestDto): Promise<ProductResponseDto> {
+    const newProduct = await this.productRepository.createProduct(product);
+
+    try {
+      const productEntity = await this.productRepository.getProductEntityById(
+        newProduct.id,
+      );
+      await this.redisSearchService.indexProduct(productEntity);
+    } catch (error) {
+      console.error('Error indexing new product:', error);
+    }
+
+    return newProduct;
   }
-  deleteProduct(id: string): Promise<void> {
-    throw new Error('Method not implemented.');
+
+  async updateProduct(product: ProductRequestDto): Promise<ProductResponseDto> {
+    const updatedProduct = await this.productRepository.updateProduct(product);
+
+    try {
+      const productEntity = await this.productRepository.getProductEntityById(
+        updatedProduct.id,
+      );
+      await this.redisSearchService.indexProduct(productEntity);
+    } catch (error) {
+      console.error('Error updating product index:', error);
+    }
+
+    return updatedProduct;
   }
-  getProductById(id: string): Promise<ProductResponseDto> {
-    throw new Error('Method not implemented.');
+
+  async deleteProduct(id: string): Promise<void> {
+    await this.productRepository.deleteProduct(id);
+
+    try {
+      await this.redisSearchService.removeProduct(id);
+    } catch (error) {
+      console.error('Error removing product from index:', error);
+    }
   }
-  getAllProducts(
+
+  async getProductById(id: string): Promise<ProductResponseDto> {
+    return this.productRepository.getProductById(id);
+  }
+
+  async getAllProducts(
     page: number = 1,
     limit: number = 10,
   ): Promise<PaginatedProductsResponseDto> {
@@ -33,7 +72,47 @@ export class ProductService implements IProductService {
     page: number = 1,
     limit: number = 10,
   ): Promise<PaginatedProductsResponseDto> {
-    return this.productRepository.searchProducts(search, page, limit);
+    try {
+      const searchResult = await this.redisSearchService.searchProducts(
+        search,
+        undefined,
+        'createdAt',
+        'desc',
+        page,
+        limit,
+      );
+
+      const products = await Promise.all(
+        searchResult.products.map(async (productData) => {
+          try {
+            return await this.productRepository.getProductById(productData.id);
+          } catch (error) {
+            console.error(`Error fetching product ${productData.id}:`, error);
+            return null;
+          }
+        }),
+      );
+
+      const validProducts = products.filter((product) => product !== null);
+
+      return {
+        products: validProducts,
+        pagination: {
+          total: searchResult.total,
+          totalPages: Math.ceil(searchResult.total / limit),
+          hasNext: page * limit < searchResult.total,
+          hasPrev: page > 1,
+          page,
+          limit,
+        },
+      };
+    } catch (error) {
+      console.error(
+        'Redis search failed, falling back to database search:',
+        error,
+      );
+      return this.productRepository.searchProducts(search, page, limit);
+    }
   }
 
   async filterProducts(
@@ -43,16 +122,65 @@ export class ProductService implements IProductService {
     page: number = 1,
     limit: number = 10,
   ): Promise<PaginatedProductsResponseDto> {
-    return this.productRepository.filterProducts(
-      categoryId,
-      sort,
-      sortBy,
-      page,
-      limit,
-    );
+    try {
+      const searchResult = await this.redisSearchService.searchProducts(
+        '',
+        categoryId,
+        sortBy,
+        sort,
+        page,
+        limit,
+      );
+
+      const products = await Promise.all(
+        searchResult.products.map(async (productData) => {
+          try {
+            return await this.productRepository.getProductById(productData.id);
+          } catch (error) {
+            console.error(`Error fetching product ${productData.id}:`, error);
+            return null;
+          }
+        }),
+      );
+
+      const validProducts = products.filter((product) => product !== null);
+
+      return {
+        products: validProducts,
+        pagination: {
+          total: searchResult.total,
+          totalPages: Math.ceil(searchResult.total / limit),
+          hasNext: page * limit < searchResult.total,
+          hasPrev: page > 1,
+          page,
+          limit,
+        },
+      };
+    } catch (error) {
+      console.error(
+        'Redis search failed, falling back to database search:',
+        error,
+      );
+      return this.productRepository.filterProducts(
+        categoryId,
+        sort,
+        sortBy,
+        page,
+        limit,
+      );
+    }
   }
 
-  async createProduct(product: ProductRequestDto): Promise<ProductResponseDto> {
-    return this.productRepository.createProduct(product);
+  async initializeSearchIndex(): Promise<void> {
+    try {
+      await this.redisSearchService.createIndex();
+
+      const allProducts =
+        await this.productRepository.getAllProductsForIndexing();
+      await this.redisSearchService.reindexAllProducts(allProducts);
+    } catch (error) {
+      console.error('Error initializing search index:', error);
+      throw error;
+    }
   }
 }

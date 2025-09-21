@@ -60,3 +60,40 @@ export class LoginRequestDto {
   @IsNotEmpty()
   password!: string;
 }
+
+export class UpdateUserRequestDto {
+  @IsString()
+  id!: string;
+
+  @IsString()
+  @IsOptional()
+  fullname?: string;
+
+  @IsEmail()
+  @IsOptional()
+  email?: string;
+
+  @IsString()
+  @IsOptional()
+  password?: string;
+
+  @IsDateString()
+  @IsOptional()
+  dob?: Date;
+
+  @IsString()
+  @IsOptional()
+  gender?: string;
+
+  @IsString()
+  @IsOptional()
+  phone?: string;
+
+  @IsString()
+  @IsOptional()
+  avt?: string;
+
+  @IsEnum(Role)
+  @IsOptional()
+  role?: Role;
+}

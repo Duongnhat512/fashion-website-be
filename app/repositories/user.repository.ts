@@ -1,6 +1,7 @@
 import { Repository } from 'typeorm';
 import { AppDataSource } from '../config/data_source';
 import User from '../models/user.model';
+import { UpdateUserRequestDto } from '../dtos/request/user/user.request.dto';
 
 export default class UserRepository {
   private repo: Repository<User>;
@@ -45,5 +46,17 @@ export default class UserRepository {
 
   updateRefreshToken(id: string, refreshToken: string) {
     return this.repo.update(id, { refreshToken });
+  }
+
+  getAllUsers() {
+    return this.repo.find();
+  }
+
+  updateUser(updateUserDto: UpdateUserRequestDto) {
+    return this.repo.update(updateUserDto.id, updateUserDto);
+  }
+
+  deleteUser(id: string) {
+    return this.repo.delete(id);
   }
 }

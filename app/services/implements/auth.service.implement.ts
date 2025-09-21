@@ -3,7 +3,7 @@ import {
   AuthResponseDto,
   TokenPayloadDto,
 } from '../../dtos/response/auth/auth.response.dto';
-import { LoginUserResponseDto } from '../../dtos/response/user /user.response.dto';
+import { LoginUserResponseDto } from '../../dtos/response/user/user.response.dto';
 import UserRepository from '../../repositories/user.repository';
 import { IAuthService } from '../auth.service.interface';
 import bcrypt from 'bcrypt';

@@ -14,6 +14,8 @@ export class ProductResponseDto {
   ratingAverage: number;
   ratingCount: number;
   variants: VariantResponseDto[];
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export class PaginatedProductsResponseDto {

@@ -4,6 +4,7 @@ import { IUserService } from '../services/user.service.interface';
 import {
   CreateUserRequestDto,
   LoginRequestDto,
+  UpdateUserRequestDto,
 } from '../dtos/request/user/user.request.dto';
 import { validate } from 'class-validator';
 import { ValidationErrorDto } from '../dtos/response/response.dto';
@@ -56,5 +57,29 @@ export class UserController {
     res
       .status(200)
       .json(ApiResponse.success('Lấy thông tin người dùng thành công', result));
+  };
+
+  updateUser = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const updateUserDto = new UpdateUserRequestDto();
+      Object.assign(updateUserDto, req.body);
+      const result = await this.userService.updateUser(updateUserDto);
+      res
+        .status(200)
+        .json(
+          ApiResponse.success(
+            'Cập nhật thông tin người dùng thành công',
+            result,
+          ),
+        );
+    } catch (error) {
+      res
+        .status(500)
+        .json(
+          ApiResponse.serverError(
+            error instanceof Error ? error.message : 'Lỗi server',
+          ),
+        );
+    }
   };
 }
