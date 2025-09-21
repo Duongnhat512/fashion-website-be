@@ -173,8 +173,6 @@ export class ProductService implements IProductService {
 
   async initializeSearchIndex(): Promise<void> {
     try {
-      await this.redisSearchService.createIndex();
-
       const allProducts =
         await this.productRepository.getAllProductsForIndexing();
       await this.redisSearchService.reindexAllProducts(allProducts);

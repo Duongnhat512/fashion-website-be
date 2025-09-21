@@ -25,7 +25,7 @@ export class PaginationDto {
 
   constructor(page?: number, limit?: number) {
     this.page = page && page > 0 ? page : 1;
-    this.limit = limit && limit > 0 ? Math.min(limit, 100) : 10; // Giới hạn tối đa 100
+    this.limit = limit && limit > 0 ? Math.min(limit, 100) : 10;
     this.offset = (this.page - 1) * this.limit;
   }
 }

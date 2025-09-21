@@ -8,15 +8,11 @@ export class RedisSearchService {
     try {
       const exists = await redis.call('FT.INFO', this.indexName);
       if (exists) {
-        console.log('Product index already exists');
         return;
       }
-    } catch (error) {
-      // Index chưa tồn tại, tạo mới
-    }
+    } catch (error) {}
 
     try {
-      // Tạo index với cấu hình phù hợp cho tiếng Việt
       await redis.call(
         'FT.CREATE',
         this.indexName,
@@ -56,7 +52,6 @@ export class RedisSearchService {
         'NUMERIC',
         'SORTABLE',
       );
-      console.log('Product search index created successfully');
     } catch (error) {
       console.error('Error creating product search index:', error);
       throw error;
@@ -65,7 +60,6 @@ export class RedisSearchService {
 
   async indexProduct(product: Product): Promise<void> {
     try {
-      // Chuẩn hóa dữ liệu trước khi index
       const productData = {
         id: product.id,
         name: this.normalizeText(product.name),
@@ -94,20 +88,19 @@ export class RedisSearchService {
     }
   }
 
-  // Hàm normalize text để xử lý tiếng Việt
   private normalizeText(text: string): string {
     if (!text) return '';
 
     return text
       .toLowerCase()
       .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // Loại bỏ dấu
+      .replace(/[\u0300-\u036f]/g, '')
       .replace(/đ/g, 'd')
       .replace(/Đ/g, 'D')
+      .replace(/\s+/g, ' ')
       .trim();
   }
 
-  // Hàm tạo query tìm kiếm thông minh
   private buildSearchQuery(query: string): string {
     if (!query || query.trim() === '') {
       return '*';
@@ -116,7 +109,6 @@ export class RedisSearchService {
     const normalizedQuery = this.normalizeText(query);
     const originalQuery = query.toLowerCase().trim();
 
-    // Tách từ khóa thành các từ riêng lẻ
     const words = normalizedQuery
       .split(/\s+/)
       .filter((word) => word.length > 0);
@@ -125,10 +117,20 @@ export class RedisSearchService {
       return '*';
     }
 
-    // Tạo query tìm kiếm với cả normalized và original text
     const searchTerms: string[] = [];
 
-    // Thêm search cho normalized text (không dấu)
+    if (words.length > 1) {
+      searchTerms.push(`@name:"${normalizedQuery}"`);
+      searchTerms.push(`@shortDescription:"${normalizedQuery}"`);
+      searchTerms.push(`@brand:"${normalizedQuery}"`);
+      searchTerms.push(`@tags:"${normalizedQuery}"`);
+
+      searchTerms.push(`@name:"${originalQuery}"`);
+      searchTerms.push(`@shortDescription:"${originalQuery}"`);
+      searchTerms.push(`@brand:"${originalQuery}"`);
+      searchTerms.push(`@tags:"${originalQuery}"`);
+    }
+
     words.forEach((word) => {
       searchTerms.push(`@name:(${word}*)`);
       searchTerms.push(`@shortDescription:(${word}*)`);
@@ -136,7 +138,6 @@ export class RedisSearchService {
       searchTerms.push(`@tags:(${word}*)`);
     });
 
-    // Thêm search cho original text (có dấu)
     const originalWords = originalQuery
       .split(/\s+/)
       .filter((word) => word.length > 0);
@@ -147,7 +148,8 @@ export class RedisSearchService {
       searchTerms.push(`@tags:(${word}*)`);
     });
 
-    return searchTerms.join(' | ');
+    const finalQuery = searchTerms.join(' | ');
+    return finalQuery;
   }
 
   async searchProducts(
@@ -162,19 +164,15 @@ export class RedisSearchService {
     total: number;
   }> {
     try {
-      // Sử dụng query tìm kiếm thông minh
       let searchQuery = this.buildSearchQuery(query);
 
-      // Thêm filter cho category nếu có
       if (categoryId) {
         searchQuery += ` @categoryId:{${categoryId}}`;
       }
 
-      // Thêm filter cho status active
       searchQuery += ` @status:{active}`;
 
-      // Xác định sort field
-      let sortField = 'createdAt'; // Không cần @ prefix cho SORTBY
+      let sortField = 'createdAt';
       if (sortBy === 'ratingAverage') {
         sortField = 'ratingAverage';
       } else if (sortBy === 'name') {
@@ -183,7 +181,6 @@ export class RedisSearchService {
 
       const offset = (page - 1) * limit;
 
-      // Thực hiện search với Redis Search
       const result = (await redis.call(
         'FT.SEARCH',
         this.indexName,
@@ -199,14 +196,15 @@ export class RedisSearchService {
       const total = result[0] as number;
       const products = [];
 
-      // Parse kết quả từ Redis
       for (let i = 1; i < result.length; i += 2) {
         const productKey = result[i] as string;
         const productData = result[i + 1] as any[];
-        const product: any = {};
 
-        // Extract product ID from key
-        product.id = productKey.replace('product:', '');
+        if (!productKey || !productData) {
+          continue;
+        }
+
+        const product: any = {};
 
         for (let j = 0; j < productData.length; j += 2) {
           const key = productData[j];
@@ -229,32 +227,25 @@ export class RedisSearchService {
         total,
       };
     } catch (error) {
-      console.error('Error searching products:', error);
       throw error;
     }
   }
 
   async reindexAllProducts(products: Product[]): Promise<void> {
     try {
-      // Xóa index cũ nếu có
-      try {
-        await redis.call('FT.DROPINDEX', this.indexName);
-      } catch (error) {
-        // Index có thể không tồn tại
-      }
-
-      // Tạo lại index
-      await this.createIndex();
-
-      // Index tất cả sản phẩm
+      await this.resetIndex();
       for (const product of products) {
         await this.indexProduct(product);
       }
-
-      console.log(`Reindexed ${products.length} products`);
     } catch (error) {
-      console.error('Error reindexing products:', error);
       throw error;
     }
+  }
+
+  async resetIndex(): Promise<void> {
+    try {
+      await redis.call('FT.DROPINDEX', this.indexName);
+    } catch (error) {}
+    await this.createIndex();
   }
 }
