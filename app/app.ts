@@ -16,6 +16,7 @@ const app: Application = express();
 async function initializeApp() {
   try {
     await initPg();
+    await AppDataSource.initialize();
     await initRedis();
     await initializeProductSearch();
   } catch (error) {
@@ -25,14 +26,6 @@ async function initializeApp() {
 }
 
 initializeApp();
-
-AppDataSource.initialize()
-  .then(() => {
-    console.log('Data Source has been initialized!');
-  })
-  .catch((error: any) =>
-    console.error('Error during Data Source initialization', error),
-  );
 
 app.use(morgan('dev'));
 app.use(
