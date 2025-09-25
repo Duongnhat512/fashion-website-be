@@ -123,7 +123,7 @@ export class ProductService implements IProductService {
     limit: number = 10,
   ): Promise<PaginatedProductsResponseDto> {
     try {
-      const searchResult = await this.redisSearchService.searchProducts(
+      const products = await this.redisSearchService.searchProducts(
         '',
         categoryId,
         sortBy,
@@ -132,25 +132,12 @@ export class ProductService implements IProductService {
         limit,
       );
 
-      const products = await Promise.all(
-        searchResult.products.map(async (productData) => {
-          try {
-            return await this.productRepository.getProductById(productData.id);
-          } catch (error) {
-            console.error(`Error fetching product ${productData.id}:`, error);
-            return null;
-          }
-        }),
-      );
-
-      const validProducts = products.filter((product) => product !== null);
-
       return {
-        products: validProducts,
+        products: products.products as ProductResponseDto[],
         pagination: {
-          total: searchResult.total,
-          totalPages: Math.ceil(searchResult.total / limit),
-          hasNext: page * limit < searchResult.total,
+          total: products.total,
+          totalPages: Math.ceil(products.total / limit),
+          hasNext: page * limit < products.total,
           hasPrev: page > 1,
           page,
           limit,
@@ -161,13 +148,7 @@ export class ProductService implements IProductService {
         'Redis search failed, falling back to database search:',
         error,
       );
-      return this.productRepository.filterProducts(
-        categoryId,
-        sort,
-        sortBy,
-        page,
-        limit,
-      );
+      return [] as any as PaginatedProductsResponseDto;
     }
   }
 

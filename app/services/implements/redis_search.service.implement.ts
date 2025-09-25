@@ -1,8 +1,11 @@
 import redis from '../../config/redis.config';
-import { Product } from '../../models/product.model';
+import { ProductResponseDto } from '../../dtos/response/product/product.response';
+import { CategoryRepository } from '../../repositories/category.repository';
+import { escapedCategoryId } from '../../utils/product.util';
 
 export class RedisSearchService {
   private readonly indexName = 'idx:products';
+  private readonly categoryRepository = new CategoryRepository();
 
   async createIndex(): Promise<void> {
     try {
@@ -25,32 +28,62 @@ export class RedisSearchService {
         'id',
         'TEXT',
         'NOSTEM',
+
         'name',
         'TEXT',
-        'WEIGHT',
-        '3.0',
-        'shortDescription',
-        'TEXT',
-        'WEIGHT',
-        '2.0',
+        'SORTABLE',
+
         'brand',
         'TEXT',
-        'WEIGHT',
-        '1.5',
+        'SORTABLE',
+
+        'shortDescription',
+        'TEXT',
+
         'tags',
         'TEXT',
-        'WEIGHT',
-        '1.0',
-        'categoryId',
-        'TAG',
+
         'status',
         'TAG',
+        'SORTABLE',
+
+        'slug',
+        'TEXT',
+
+        'imageUrl',
+        'TEXT',
+        'NOSTEM',
+
+        'categoryId',
+        'TAG',
+        'SORTABLE',
+
         'ratingAverage',
         'NUMERIC',
         'SORTABLE',
+
+        'ratingCount',
+        'NUMERIC',
+        'SORTABLE',
+
         'createdAt',
         'NUMERIC',
         'SORTABLE',
+
+        'updatedAt',
+        'NUMERIC',
+        'SORTABLE',
+
+        'minPrice',
+        'NUMERIC',
+        'SORTABLE',
+
+        'maxPrice',
+        'NUMERIC',
+        'SORTABLE',
+
+        'variants',
+        'TEXT',
       );
     } catch (error) {
       console.error('Error creating product search index:', error);
@@ -58,18 +91,41 @@ export class RedisSearchService {
     }
   }
 
-  async indexProduct(product: Product): Promise<void> {
+  private getMinPrice(variants: any[]): number {
+    if (!variants || variants.length === 0) return 0;
+    const prices = variants
+      .map((v) => (v.onSales ? v.discountPrice : v.price))
+      .filter((p) => p > 0);
+    return prices.length > 0 ? Math.min(...prices) : 0;
+  }
+
+  private getMaxPrice(variants: any[]): number {
+    if (!variants || variants.length === 0) return 0;
+    const prices = variants
+      .map((v) => (v.onSales ? v.discountPrice : v.price))
+      .filter((p) => p > 0);
+    return prices.length > 0 ? Math.max(...prices) : 0;
+  }
+
+  async indexProduct(product: ProductResponseDto): Promise<void> {
     try {
       const productData = {
         id: product.id,
         name: this.normalizeText(product.name),
+        slug: product.slug,
         shortDescription: this.normalizeText(product.shortDescription),
+        imageUrl: product.imageUrl,
         brand: this.normalizeText(product.brand || ''),
         tags: this.normalizeText(product.tags || ''),
-        categoryId: product.category?.id || '',
-        status: product.status,
+        categoryId: product.categoryId || '',
+        status: product.status || 'active',
         ratingAverage: product.ratingAverage,
+        ratingCount: product.ratingCount,
         createdAt: product.createdAt.getTime(),
+        updatedAt: product.updatedAt.getTime(),
+        minPrice: this.getMinPrice(product.variants || []),
+        maxPrice: this.getMaxPrice(product.variants || []),
+        variants: JSON.stringify(product.variants || []),
       };
 
       await redis.hset(`product:${product.id}`, productData);
@@ -152,6 +208,31 @@ export class RedisSearchService {
     return finalQuery;
   }
 
+  private async getDescendantCategoryIds(rootId: string): Promise<string[]> {
+    const all = await this.categoryRepository.getAll();
+    const childrenMap = new Map<string, string[]>();
+    for (const c of all) {
+      if (c.parentId) {
+        const arr = childrenMap.get(c.parentId) || [];
+        arr.push(c.id);
+        childrenMap.set(c.parentId, arr);
+      }
+    }
+    const result = new Set<string>([rootId]);
+    const stack = [rootId];
+    while (stack.length) {
+      const cur = stack.pop()!;
+      const kids = childrenMap.get(cur) || [];
+      for (const kid of kids) {
+        if (!result.has(kid)) {
+          result.add(kid);
+          stack.push(kid);
+        }
+      }
+    }
+    return Array.from(result);
+  }
+
   async searchProducts(
     query: string,
     categoryId?: string,
@@ -166,17 +247,25 @@ export class RedisSearchService {
     try {
       let searchQuery = this.buildSearchQuery(query);
 
-      if (categoryId) {
-        searchQuery += ` @categoryId:{${categoryId}}`;
+      if (searchQuery === '*') {
+        searchQuery = '';
       }
 
-      searchQuery += ` @status:{active}`;
+      if (categoryId) {
+        const ids = await this.getDescendantCategoryIds(categoryId);
+        const tag = ids.map((id) => escapedCategoryId(id)).join('|');
+        searchQuery += `@categoryId:{${tag}} `;
+      }
+
+      searchQuery += `@status:{active} `;
 
       let sortField = 'createdAt';
       if (sortBy === 'ratingAverage') {
         sortField = 'ratingAverage';
       } else if (sortBy === 'name') {
         sortField = 'name';
+      } else if (sortBy === 'price') {
+        sortField = 'minPrice';
       }
 
       const offset = (page - 1) * limit;
@@ -210,10 +299,18 @@ export class RedisSearchService {
           const key = productData[j];
           const value = productData[j + 1];
 
-          if (key === 'createdAt') {
+          if (key === 'createdAt' || key === 'updatedAt') {
             product[key] = new Date(parseInt(value));
           } else if (key === 'ratingAverage') {
             product[key] = parseFloat(value);
+          } else if (key === 'ratingCount') {
+            product[key] = parseInt(value);
+          } else if (key === 'variants') {
+            try {
+              product[key] = JSON.parse(value);
+            } catch (error) {
+              product[key] = [];
+            }
           } else {
             product[key] = value;
           }
@@ -231,7 +328,7 @@ export class RedisSearchService {
     }
   }
 
-  async reindexAllProducts(products: Product[]): Promise<void> {
+  async reindexAllProducts(products: ProductResponseDto[]): Promise<void> {
     try {
       await this.resetIndex();
       for (const product of products) {

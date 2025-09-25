@@ -131,10 +131,6 @@ export class ProductRepository {
     page: number = 1,
     limit: number = 10,
   ): Promise<PaginatedProductsResponseDto> {
-    if (sortBy === 'price') {
-      return this.filterProductsByPrice(categoryId, sort, page, limit);
-    }
-
     let where: any = {};
     if (categoryId) {
       where.category = { id: categoryId };
@@ -172,68 +168,7 @@ export class ProductRepository {
       },
     };
   }
-
-  async filterProductsByPrice(
-    categoryId: string,
-    sort: string = 'desc',
-    page: number = 1,
-    limit: number = 10,
-  ): Promise<PaginatedProductsResponseDto> {
-    const direction = sort.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
-
-    const where: any = {};
-    if (categoryId) {
-      where.category = { id: categoryId };
-    }
-
-    const total = await this.productRepository.count({ where });
-
-    const qb = this.productRepository
-      .createQueryBuilder('product')
-      .innerJoin(
-        (sub) =>
-          sub
-            .from(Product, 'p')
-            .leftJoin('p.variants', 'v')
-            .select('p.id', 'productId')
-            .addSelect('MIN(v.price)', 'minPrice')
-            .groupBy('p.id'),
-        'mv',
-        'mv.productId = product.id',
-      )
-      .addSelect('mv.minPrice', 'minPrice')
-      .leftJoinAndSelect('product.variants', 'variant')
-      .leftJoinAndSelect('variant.color', 'color')
-      .leftJoinAndSelect('product.category', 'category');
-
-    if (categoryId) {
-      qb.andWhere('category.id = :categoryId', { categoryId });
-    }
-
-    const products = await qb
-      .orderBy('minPrice', direction as 'ASC' | 'DESC')
-      .skip((page - 1) * limit)
-      .take(limit)
-      .getMany();
-
-    return {
-      products: products.map((product) => ({
-        ...product,
-        categoryId: product.category?.id,
-        category: undefined,
-        brand: product.brand ?? '',
-      })),
-      pagination: {
-        total,
-        totalPages: Math.ceil(total / limit),
-        hasNext: page * limit < total,
-        hasPrev: page > 1,
-        page,
-        limit,
-      },
-    };
-  }
-  async getProductEntityById(id: string): Promise<Product> {
+  async getProductEntityById(id: string): Promise<ProductResponseDto> {
     const product = await this.productRepository.findOne({
       where: { id },
       relations: {
@@ -243,14 +178,27 @@ export class ProductRepository {
     if (!product) {
       throw new Error('Product not found');
     }
-    return product;
+    return {
+      ...product,
+      categoryId: product.category?.id,
+      brand: product.brand ?? '',
+    };
   }
 
-  async getAllProductsForIndexing(): Promise<Product[]> {
-    return this.productRepository.find({
+  async getAllProductsForIndexing(): Promise<ProductResponseDto[]> {
+    const products = await this.productRepository.find({
       relations: {
+        variants: {
+          color: true,
+        },
         category: true,
       },
     });
+    return products.map((product) => ({
+      ...product,
+      categoryId: product.category?.id,
+      category: undefined,
+      brand: product.brand ?? '',
+    }));
   }
 }
