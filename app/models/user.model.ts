@@ -5,8 +5,10 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Index,
+  OneToMany,
 } from 'typeorm';
 import Role from './enum/role.enum';
+import { Order } from './order.model';
 
 @Entity({ name: 'users' })
 export default class User {
@@ -54,4 +56,7 @@ export default class User {
 
   @UpdateDateColumn({ type: 'timestamptz', name: 'updated_at' })
   updatedAt!: Date;
+
+  @OneToMany(() => Order, (order) => order.user)
+  orders: Order[];
 }

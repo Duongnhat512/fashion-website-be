@@ -11,6 +11,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { Variant } from './variant.model';
+import { OrderItem } from './order_item.model';
 
 @Entity({ name: 'products' })
 export class Product {
@@ -57,4 +58,7 @@ export class Product {
 
   @OneToMany(() => Variant, (variant) => variant.product)
   variants!: Variant[];
+
+  @OneToMany(() => OrderItem, (orderItem) => orderItem.product)
+  orderItems!: OrderItem[];
 }

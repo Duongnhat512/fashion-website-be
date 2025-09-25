@@ -4,11 +4,13 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { Color } from './color.model';
 import { Product } from './product.model';
+import { OrderItem } from './order_item.model';
 
 @Entity({ name: 'variants' })
 export class Variant {
@@ -55,4 +57,7 @@ export class Variant {
 
   @UpdateDateColumn({ type: 'timestamptz', name: 'updated_at' })
   updatedAt!: Date;
+
+  @OneToMany(() => OrderItem, (orderItem) => orderItem.variant)
+  orderItems!: OrderItem[];
 }
