@@ -17,18 +17,20 @@ export class ProductRepository {
   async createProduct(product: ProductRequestDto): Promise<ProductResponseDto> {
     const newProduct = await this.productRepository.save({
       ...product,
-      category: {
-        id: product.categoryId,
-      },
     });
     return this.getProductById(newProduct.id);
   }
 
   async updateProduct(product: ProductRequestDto): Promise<ProductResponseDto> {
-    const updatedProduct = await this.productRepository.save(product);
+    const updatedProduct = await this.productRepository.save({
+      ...product,
+    });
     return {
       ...updatedProduct,
-      categoryId: updatedProduct.category.id,
+      categoryId: updatedProduct.category?.id,
+      brand: updatedProduct.brand ?? '',
+      createdAt: updatedProduct.createdAt,
+      updatedAt: updatedProduct.updatedAt,
     };
   }
 

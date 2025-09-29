@@ -205,7 +205,7 @@ export class RedisSearchService {
     });
 
     const finalQuery = searchTerms.join(' | ');
-    return finalQuery;
+    return finalQuery + ' ';
   }
 
   private async getDescendantCategoryIds(rootId: string): Promise<string[]> {

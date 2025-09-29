@@ -10,6 +10,7 @@ import productRouter from './routers/product.route';
 import authRouter from './routers/auth.route';
 import { initRedis } from './config/redis.config';
 import { initializeProductSearch } from './utils/initialize_search';
+import orderRouter from './routers/order.route';
 
 const app: Application = express();
 
@@ -49,5 +50,5 @@ app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/users', userRouter);
 app.use('/api/v1/categories', categoryRouter);
 app.use('/api/v1/products', productRouter);
-
+app.use('/api/v1/orders', orderRouter);
 export default app;

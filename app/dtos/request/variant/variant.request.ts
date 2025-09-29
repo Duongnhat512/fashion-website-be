@@ -1,12 +1,52 @@
+import {
+  IsBoolean,
+  IsNotEmpty,
+  IsNumber,
+  IsObject,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
+import { Product } from '../../../models/product.model';
+import { Color } from '../../../models/color.model';
+
 export class VariantRequestDto {
-  sku: string;
-  colorId: string;
-  size: string;
-  price: number;
-  discountPrice: number;
-  discountPercent: number;
-  stock: number;
-  imageUrl: string;
-  onSales: boolean;
-  saleNote: string;
+  @IsString()
+  @IsNotEmpty()
+  sku!: string;
+
+  @IsObject()
+  color!: Color;
+
+  @IsString()
+  @IsNotEmpty()
+  size!: string;
+
+  @IsNumber()
+  price!: number;
+
+  @IsNumber()
+  discountPrice!: number;
+
+  @IsNumber()
+  @IsOptional()
+  discountPercent?: number;
+
+  @IsNumber()
+  stock!: number;
+
+  @IsString()
+  @IsNotEmpty()
+  imageUrl!: string;
+
+  @IsBoolean()
+  @IsOptional()
+  onSales?: boolean;
+
+  @IsString()
+  @IsOptional()
+  saleNote?: string;
+
+  @IsOptional()
+  product?: Product;
 }

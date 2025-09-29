@@ -11,5 +11,11 @@ router.get('/filter', (req, res) => productController.filterProducts(req, res));
 router.post('/', adminOnly, (req, res) =>
   productController.createProduct(req, res),
 );
+router.put('/', adminOnly, (req, res) =>
+  productController.updateProduct(req, res),
+);
+router.post('/delete/:id', adminOnly, (req, res) =>
+  productController.deleteProduct(req, res),
+);
 
 export default router;
