@@ -8,6 +8,7 @@ import {
 import { Order } from './order.model';
 import { Product } from './product.model';
 import { Variant } from './variant.model';
+import { Warehouse } from './warehouse.model';
 
 @Entity('order_items')
 export class OrderItem {
@@ -31,4 +32,8 @@ export class OrderItem {
 
   @Column({ type: 'double precision', name: 'price' })
   price: number;
+
+  @ManyToOne(() => Warehouse, (warehouse) => warehouse.orderItems)
+  @JoinColumn({ name: 'warehouse_id' })
+  warehouse: Warehouse;
 }

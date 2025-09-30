@@ -11,55 +11,23 @@ import { OrderItem } from '../models/order_item.model';
 
 export class OrderRepository {
   private readonly orderRepository: Repository<Order>;
-  private readonly addressRepository: Repository<OrderShippingAddress>;
-  private readonly itemRepository: Repository<OrderItem>;
 
   constructor() {
     this.orderRepository = AppDataSource.getRepository(Order);
-    this.addressRepository = AppDataSource.getRepository(OrderShippingAddress);
-    this.itemRepository = AppDataSource.getRepository(OrderItem);
   }
 
   async createOrder(order: CreateOrderRequestDto): Promise<OrderResponseDto> {
     const created = await this.orderRepository.save({
-      status: order.status,
-      subTotal: order.subTotal,
-      discount: order.discount,
-      totalAmount: order.totalAmount,
-      shippingFee: order.shippingFee,
-      user: { id: order.user.id } as any,
+      ...order,
     });
-
-    if (order.shippingAddress) {
-      await this.addressRepository.save({
-        ...order.shippingAddress,
-        order: { id: created.id } as any,
-      });
-    }
-
-    if (order.items?.length) {
-      await Promise.all(
-        order.items.map((i) =>
-          this.itemRepository.save({
-            order: { id: created.id } as any,
-            product: i.product
-              ? ({ id: (i.product as any).id } as any)
-              : undefined,
-            variant: i.variant
-              ? ({ id: (i.variant as any).id } as any)
-              : undefined,
-            quantity: i.quantity,
-            price: i.price,
-          }),
-        ),
-      );
-    }
 
     return this.getOrderById(created.id);
   }
 
   async updateOrder(order: UpdateOrderRequestDto): Promise<OrderResponseDto> {
-    const updatedOrder = await this.orderRepository.save(order as any);
+    const updatedOrder = await this.orderRepository.save({
+      ...order,
+    });
     return updatedOrder as OrderResponseDto;
   }
 
