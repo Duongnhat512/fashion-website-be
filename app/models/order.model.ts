@@ -42,12 +42,13 @@ export class Order {
   @UpdateDateColumn({ type: 'timestamptz', name: 'updated_at' })
   updatedAt: Date;
 
-  @OneToMany(() => OrderItem, (orderItem) => orderItem.order)
+  @OneToMany(() => OrderItem, (orderItem) => orderItem.order, { cascade: true })
   items: OrderItem[];
 
   @OneToOne(
     () => OrderShippingAddress,
     (shippingAddress) => shippingAddress.order,
+    { cascade: true },
   )
   shippingAddress: OrderShippingAddress;
 }

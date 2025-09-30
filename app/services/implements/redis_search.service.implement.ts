@@ -1,12 +1,13 @@
 import redis from '../../config/redis.config';
 import { ProductResponseDto } from '../../dtos/response/product/product.response';
 import { CategoryRepository } from '../../repositories/category.repository';
+import { ProductRepository } from '../../repositories/product.repository';
 import { escapedCategoryId } from '../../utils/product.util';
 
 export class RedisSearchService {
   private readonly indexName = 'idx:products';
   private readonly categoryRepository = new CategoryRepository();
-
+  private readonly productRepository = new ProductRepository();
   async createIndex(): Promise<void> {
     try {
       const exists = await redis.call('FT.INFO', this.indexName);
@@ -111,12 +112,12 @@ export class RedisSearchService {
     try {
       const productData = {
         id: product.id,
-        name: this.normalizeText(product.name),
+        name: product.name,
         slug: product.slug,
-        shortDescription: this.normalizeText(product.shortDescription),
+        shortDescription: product.shortDescription,
         imageUrl: product.imageUrl,
-        brand: this.normalizeText(product.brand || ''),
-        tags: this.normalizeText(product.tags || ''),
+        brand: product.brand || '',
+        tags: product.tags || '',
         categoryId: product.categoryId || '',
         status: product.status || 'active',
         ratingAverage: product.ratingAverage,
@@ -136,10 +137,20 @@ export class RedisSearchService {
   }
 
   async removeProduct(productId: string): Promise<void> {
+    const key = `product:${productId}`;
     try {
-      await redis.del(`product:${productId}`);
+      const delCount = await redis.del(key);
+      if (delCount === 0) {
+        console.error(`Redis hash not found: ${key}`);
+      }
+
+      try {
+        await redis.call('FT.DEL', this.indexName, key);
+      } catch (e: any) {
+        console.error('Error removing product from index:', e);
+      }
     } catch (error) {
-      console.error('Error removing product from index:', error);
+      console.error('Error removing product from Redis:', error);
       throw error;
     }
   }
@@ -328,9 +339,10 @@ export class RedisSearchService {
     }
   }
 
-  async reindexAllProducts(products: ProductResponseDto[]): Promise<void> {
+  async reindexAllProducts(): Promise<void> {
     try {
       await this.resetIndex();
+      const products = await this.productRepository.getAllProductsForIndexing();
       for (const product of products) {
         await this.indexProduct(product);
       }

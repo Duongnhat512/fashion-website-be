@@ -34,8 +34,9 @@ export class ProductRepository {
     };
   }
 
-  async deleteProduct(id: string): Promise<void> {
+  async deleteProduct(id: string): Promise<string> {
     await this.productRepository.delete(id);
+    return id;
   }
 
   async getProductById(id: string): Promise<ProductResponseDto> {
@@ -175,6 +176,9 @@ export class ProductRepository {
       where: { id },
       relations: {
         category: true,
+        variants: {
+          color: true,
+        },
       },
     });
     if (!product) {

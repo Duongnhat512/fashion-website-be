@@ -1,4 +1,10 @@
-import { Column, Entity, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  OneToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { Order } from './order.model';
 
 @Entity('order_shipping_addresses')
@@ -7,6 +13,7 @@ export class OrderShippingAddress {
   id: string;
 
   @OneToOne(() => Order, (order) => order.shippingAddress)
+  @JoinColumn({ name: 'order_id' })
   order: Order;
 
   @Column({ type: 'varchar', length: 255, name: 'full_name' })

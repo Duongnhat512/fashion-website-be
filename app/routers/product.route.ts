@@ -14,7 +14,7 @@ router.post('/', adminOnly, (req, res) =>
 router.put('/', adminOnly, (req, res) =>
   productController.updateProduct(req, res),
 );
-router.post('/delete/:id', adminOnly, (req, res) =>
+router.post('/delete', adminOnly, (req, res) =>
   productController.deleteProduct(req, res),
 );
 

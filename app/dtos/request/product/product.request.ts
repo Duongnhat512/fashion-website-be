@@ -1,4 +1,5 @@
 import {
+  IsArray,
   IsNotEmpty,
   IsObject,
   IsOptional,
@@ -6,6 +7,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Category } from '../../../models/category.model';
+import { Variant } from '../../../models/variant.model';
 
 export class ProductRequestDto {
   @IsString()
@@ -38,4 +40,9 @@ export class ProductRequestDto {
   @IsString()
   @IsOptional()
   tags?: string;
+
+  @IsArray()
+  @IsOptional()
+  @ValidateNested({ each: true })
+  variants?: Variant[];
 }

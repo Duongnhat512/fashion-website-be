@@ -82,21 +82,8 @@ export class ProductService implements IProductService {
         limit,
       );
 
-      const products = await Promise.all(
-        searchResult.products.map(async (productData) => {
-          try {
-            return await this.productRepository.getProductById(productData.id);
-          } catch (error) {
-            console.error(`Error fetching product ${productData.id}:`, error);
-            return null;
-          }
-        }),
-      );
-
-      const validProducts = products.filter((product) => product !== null);
-
       return {
-        products: validProducts,
+        products: searchResult.products,
         pagination: {
           total: searchResult.total,
           totalPages: Math.ceil(searchResult.total / limit),
@@ -154,9 +141,7 @@ export class ProductService implements IProductService {
 
   async initializeSearchIndex(): Promise<void> {
     try {
-      const allProducts =
-        await this.productRepository.getAllProductsForIndexing();
-      await this.redisSearchService.reindexAllProducts(allProducts);
+      await this.redisSearchService.reindexAllProducts();
     } catch (error) {
       console.error('Error initializing search index:', error);
       throw error;

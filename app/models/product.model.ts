@@ -56,7 +56,7 @@ export class Product {
   @UpdateDateColumn({ type: 'timestamptz', name: 'updated_at' })
   updatedAt!: Date;
 
-  @OneToMany(() => Variant, (variant) => variant.product)
+  @OneToMany(() => Variant, (variant) => variant.product, { cascade: true })
   variants!: Variant[];
 
   @OneToMany(() => OrderItem, (orderItem) => orderItem.product)

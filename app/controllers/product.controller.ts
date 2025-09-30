@@ -6,18 +6,13 @@ import { ProductRequestDto } from '../dtos/request/product/product.request';
 import { validate } from 'class-validator';
 import { ValidationErrorDto } from '../dtos/response/response.dto';
 import { VariantRequestDto } from '../dtos/request/variant/variant.request';
-import { VariantService } from '../services/implements/variant.service.implement';
-import { IVariantService } from '../services/variant.service.interface';
-import { Product } from '../models/product.model';
 import { Category } from '../models/category.model';
 import { Color } from '../models/color.model';
 
 export class ProductController {
   private readonly productService: IProductService;
-  private readonly variantService: IVariantService;
   constructor() {
     this.productService = new ProductService();
-    this.variantService = new VariantService();
   }
 
   async getProductById(req: Request, res: Response) {
@@ -70,7 +65,14 @@ export class ProductController {
 
       createProductDto.category = { id: req.body.category.id } as Category;
 
-      console.log(createProductDto);
+      if (req.body.variants && req.body.variants.length > 0) {
+        createProductDto.variants = req.body.variants.map((variant: any) => {
+          const variantDto = new VariantRequestDto();
+          Object.assign(variantDto, variant);
+          variantDto.color = { id: variant.color.id } as Color;
+          return variantDto;
+        });
+      }
 
       const errors = await validate(createProductDto);
 
@@ -83,28 +85,8 @@ export class ProductController {
         res.status(400).json(ApiResponse.validationError(validationErrors));
         return;
       }
+
       const product = await this.productService.createProduct(createProductDto);
-
-      const variants = req.body.variants;
-
-      for (const variant of variants) {
-        const variantDto = new VariantRequestDto();
-        Object.assign(variantDto, variant);
-        variantDto.product = { id: product.id } as Product;
-        variantDto.color = { id: variant.color.id } as Color;
-        const errors = await validate(variantDto);
-        if (errors.length > 0) {
-          const validationErrors: ValidationErrorDto[] = errors.map(
-            (error) => ({
-              field: error.property,
-              message: Object.values(error.constraints || {}),
-            }),
-          );
-          res.status(400).json(ApiResponse.validationError(validationErrors));
-          return;
-        }
-        await this.variantService.createVariant(variantDto);
-      }
       res.status(200).json(ApiResponse.success('Create product', product));
     } catch (error) {
       res.status(500).json(
@@ -126,7 +108,7 @@ export class ProductController {
   }
 
   async deleteProduct(req: Request, res: Response) {
-    const { id } = req.params;
+    const { id } = req.body;
 
     await this.productService.deleteProduct(id);
     res.status(200).json(ApiResponse.success('Delete product', null));
