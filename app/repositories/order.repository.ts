@@ -63,8 +63,9 @@ export class OrderRepository {
     return updatedOrder as OrderResponseDto;
   }
 
-  async deleteOrder(id: string): Promise<void> {
+  async deleteOrder(id: string): Promise<string> {
     await this.orderRepository.delete(id);
+    return id;
   }
 
   async getOrderById(id: string): Promise<OrderResponseDto> {

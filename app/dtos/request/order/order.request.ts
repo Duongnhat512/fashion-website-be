@@ -8,6 +8,8 @@ import {
   IsNumber,
   IsObject,
   IsOptional,
+  IsString,
+  ValidateNested,
 } from 'class-validator';
 
 export class CreateOrderRequestDto {
@@ -31,19 +33,47 @@ export class CreateOrderRequestDto {
 
   @IsOptional()
   @IsObject()
+  @ValidateNested()
   shippingAddress?: OrderShippingAddress;
 
   @IsOptional()
   @IsArray()
+  @ValidateNested({ each: true })
   items?: OrderItem[];
 }
 
 export class UpdateOrderRequestDto {
-  status!: OrderStatus;
-  subTotal!: number;
-  discount!: number;
-  totalAmount!: number;
-  shippingFee!: number;
-  items!: OrderItem[];
-  shippingAddress!: OrderShippingAddress;
+  @IsOptional()
+  @IsString()
+  id!: string;
+
+  @IsOptional()
+  @IsEnum(OrderStatus)
+  status?: OrderStatus;
+
+  @IsOptional()
+  @IsNumber()
+  subTotal?: number;
+
+  @IsOptional()
+  @IsNumber()
+  discount?: number;
+
+  @IsOptional()
+  @IsNumber()
+  totalAmount?: number;
+
+  @IsOptional()
+  @IsNumber()
+  shippingFee?: number;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  items?: OrderItem[];
+
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  shippingAddress?: OrderShippingAddress;
 }

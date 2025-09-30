@@ -12,7 +12,9 @@ export class OrderShippingAddress {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @OneToOne(() => Order, (order) => order.shippingAddress)
+  @OneToOne(() => Order, (order) => order.shippingAddress, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'order_id' })
   order: Order;
 

@@ -50,3 +50,49 @@ export class VariantRequestDto {
   @IsOptional()
   product?: Product;
 }
+
+export class UpdateVariantRequestDto {
+  @IsString()
+  @IsNotEmpty()
+  id!: string;
+
+  @IsString()
+  @IsOptional()
+  sku?: string;
+
+  @IsObject()
+  @IsOptional()
+  color?: Color;
+
+  @IsString()
+  @IsOptional()
+  size?: string;
+
+  @IsNumber()
+  @IsOptional()
+  price?: number;
+
+  @IsNumber()
+  @IsOptional()
+  discountPrice?: number;
+
+  @IsNumber()
+  @IsOptional()
+  discountPercent?: number;
+
+  @IsNumber()
+  @IsOptional()
+  stock?: number;
+
+  @IsString()
+  @IsOptional()
+  imageUrl?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  onSales?: boolean;
+
+  @IsString()
+  @IsOptional()
+  saleNote?: string;
+}

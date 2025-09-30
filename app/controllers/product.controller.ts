@@ -2,10 +2,16 @@ import { Request, Response } from 'express';
 import { IProductService } from '../services/product.service.interface';
 import { ApiResponse } from '../dtos/response/api.response.dto';
 import { ProductService } from '../services/implements/product.service.implement';
-import { ProductRequestDto } from '../dtos/request/product/product.request';
+import {
+  ProductRequestDto,
+  UpdateProductRequestDto,
+} from '../dtos/request/product/product.request';
 import { validate } from 'class-validator';
 import { ValidationErrorDto } from '../dtos/response/response.dto';
-import { VariantRequestDto } from '../dtos/request/variant/variant.request';
+import {
+  UpdateVariantRequestDto,
+  VariantRequestDto,
+} from '../dtos/request/variant/variant.request';
 import { Category } from '../models/category.model';
 import { Color } from '../models/color.model';
 
@@ -101,14 +107,39 @@ export class ProductController {
   }
 
   async updateProduct(req: Request, res: Response) {
-    const updateProductDto = new ProductRequestDto();
+    const updateProductDto = new UpdateProductRequestDto();
     Object.assign(updateProductDto, req.body);
+
+    updateProductDto.category = { id: req.body.category.id } as Category;
+
+    if (req.body.variants && req.body.variants.length > 0) {
+      updateProductDto.variants = req.body.variants.map((variant: any) => {
+        const variantDto = new UpdateVariantRequestDto();
+        Object.assign(variantDto, variant);
+        if (variant.color) {
+          variantDto.color = { id: variant.color.id } as Color;
+        }
+        return variantDto;
+      });
+    }
+
+    const errors = await validate(updateProductDto);
+    if (errors.length > 0) {
+      const validationErrors: ValidationErrorDto[] = errors.map((error) => ({
+        field: error.property,
+        message: Object.values(error.constraints || {}),
+      }));
+      return res
+        .status(400)
+        .json(ApiResponse.error('Validation errors', validationErrors));
+    }
+
     const product = await this.productService.updateProduct(updateProductDto);
     res.status(200).json(ApiResponse.success('Update product', product));
   }
 
   async deleteProduct(req: Request, res: Response) {
-    const { id } = req.body;
+    const { id } = req.params;
 
     await this.productService.deleteProduct(id);
     res.status(200).json(ApiResponse.success('Delete product', null));

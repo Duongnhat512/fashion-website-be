@@ -17,8 +17,9 @@ export class OrderService implements IOrderService {
     return this.orderRepository.updateOrder(order);
   }
 
-  async deleteOrder(id: string): Promise<void> {
-    return this.orderRepository.deleteOrder(id);
+  async deleteOrder(id: string): Promise<string> {
+    await this.orderRepository.deleteOrder(id);
+    return id;
   }
 
   async getOrderById(id: string): Promise<OrderResponseDto> {

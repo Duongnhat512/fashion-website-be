@@ -1,6 +1,9 @@
 import { Request, Response } from 'express';
 import { OrderService } from '../services/implements/order.service.implement';
-import { CreateOrderRequestDto } from '../dtos/request/order/order.request';
+import {
+  CreateOrderRequestDto,
+  UpdateOrderRequestDto,
+} from '../dtos/request/order/order.request';
 import { validate } from 'class-validator';
 import { ApiResponse } from '../dtos/response/api.response.dto';
 import { ValidationErrorDto } from '../dtos/response/response.dto';
@@ -64,7 +67,22 @@ export class OrderController {
 
   updateOrder = async (req: Request, res: Response) => {
     try {
-      const order = await this.orderService.updateOrder(req.body);
+      const updateOrderDto = new UpdateOrderRequestDto();
+      Object.assign(updateOrderDto, req.body);
+
+      const errors = await validate(updateOrderDto);
+      if (errors.length > 0) {
+        const validationErrors: ValidationErrorDto[] = errors.map((error) => ({
+          field: error.property,
+          message: Object.values(error.constraints || {}),
+        }));
+
+        return res
+          .status(400)
+          .json(ApiResponse.error('Validation errors', validationErrors));
+      }
+
+      const order = await this.orderService.updateOrder(updateOrderDto);
       res.status(200).json(ApiResponse.success('Order updated', order));
     } catch (error) {
       console.log(error);
@@ -74,8 +92,8 @@ export class OrderController {
 
   deleteOrder = async (req: Request, res: Response) => {
     try {
-      await this.orderService.deleteOrder(req.params.id);
-      res.status(204).send();
+      const id = await this.orderService.deleteOrder(req.params.id);
+      res.status(200).json(ApiResponse.success('Order deleted', id));
     } catch (error) {
       console.log(error);
       res.status(500).json(ApiResponse.error('Internal server error'));
@@ -93,11 +111,16 @@ export class OrderController {
   };
 
   getAllOrders = async (req: Request, res: Response) => {
-    const { page = 1, limit = 10 } = req.query;
-    const orders = await this.orderService.getAllOrders(
-      Number(page),
-      Number(limit),
-    );
-    res.status(200).json(ApiResponse.success('Get all orders', orders));
+    try {
+      const { page = 1, limit = 10 } = req.query;
+      const orders = await this.orderService.getAllOrders(
+        Number(page),
+        Number(limit),
+      );
+      res.status(200).json(ApiResponse.success('Get all orders', orders));
+    } catch (error) {
+      console.log(error);
+      res.status(500).json(ApiResponse.error('Internal server error'));
+    }
   };
 }

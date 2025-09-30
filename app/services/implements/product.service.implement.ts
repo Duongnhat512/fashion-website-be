@@ -4,7 +4,10 @@ import {
 } from '../../dtos/response/product/product.response';
 import { ProductRepository } from '../../repositories/product.repository';
 import { IProductService } from '../product.service.interface';
-import { ProductRequestDto } from '../../dtos/request/product/product.request';
+import {
+  ProductRequestDto,
+  UpdateProductRequestDto,
+} from '../../dtos/request/product/product.request';
 import { RedisSearchService } from './redis_search.service.implement';
 
 export class ProductService implements IProductService {
@@ -31,18 +34,18 @@ export class ProductService implements IProductService {
     return newProduct;
   }
 
-  async updateProduct(product: ProductRequestDto): Promise<ProductResponseDto> {
-    const updatedProduct = await this.productRepository.updateProduct(product);
+  async updateProduct(
+    product: UpdateProductRequestDto,
+  ): Promise<ProductResponseDto> {
+    await this.productRepository.updateProduct(product);
 
+    let updatedProduct: ProductResponseDto = {} as ProductResponseDto;
     try {
-      const productEntity = await this.productRepository.getProductEntityById(
-        updatedProduct.id,
-      );
-      await this.redisSearchService.indexProduct(productEntity);
+      updatedProduct = await this.productRepository.getProductById(product.id);
+      await this.redisSearchService.indexProduct(updatedProduct);
     } catch (error) {
       console.error('Error updating product index:', error);
     }
-
     return updatedProduct;
   }
 

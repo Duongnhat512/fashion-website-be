@@ -5,7 +5,10 @@ import {
   PaginatedProductsResponseDto,
   ProductResponseDto,
 } from '../dtos/response/product/product.response';
-import { ProductRequestDto } from '../dtos/request/product/product.request';
+import {
+  ProductRequestDto,
+  UpdateProductRequestDto,
+} from '../dtos/request/product/product.request';
 
 export class ProductRepository {
   private readonly productRepository: Repository<Product>;
@@ -21,7 +24,9 @@ export class ProductRepository {
     return this.getProductById(newProduct.id);
   }
 
-  async updateProduct(product: ProductRequestDto): Promise<ProductResponseDto> {
+  async updateProduct(
+    product: UpdateProductRequestDto,
+  ): Promise<ProductResponseDto> {
     const updatedProduct = await this.productRepository.save({
       ...product,
     });
