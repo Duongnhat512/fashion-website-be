@@ -10,5 +10,6 @@ router.put('/', adminOnly, orderController.updateOrder);
 router.post('/delete/:id', adminOnly, orderController.deleteOrder);
 router.get('/:id', authenticatedUser, orderController.getOrderById);
 router.get('/', adminOnly, orderController.getAllOrders);
+router.post('/cancel/:id', authenticatedUser, orderController.cancelOrder);
 
 export default router;

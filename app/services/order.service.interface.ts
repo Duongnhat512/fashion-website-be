@@ -10,4 +10,5 @@ export interface IOrderService {
   deleteOrder(id: string): Promise<string>;
   getOrderById(id: string): Promise<OrderResponseDto>;
   getAllOrders(page: number, limit: number): Promise<OrderResponseDto[]>;
+  cancelOrder(orderId: string): Promise<void>;
 }

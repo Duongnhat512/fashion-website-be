@@ -11,6 +11,7 @@ import authRouter from './routers/auth.route';
 import { initRedis } from './config/redis.config';
 import { initializeProductSearch } from './utils/initialize_search';
 import orderRouter from './routers/order.route';
+import { warehouseRouter } from './routers/warehouse.route';
 
 const app: Application = express();
 
@@ -51,4 +52,6 @@ app.use('/api/v1/users', userRouter);
 app.use('/api/v1/categories', categoryRouter);
 app.use('/api/v1/products', productRouter);
 app.use('/api/v1/orders', orderRouter);
+app.use('/api/v1/warehouses', warehouseRouter);
+
 export default app;
