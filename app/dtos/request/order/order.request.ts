@@ -11,6 +11,9 @@ import {
   IsString,
   ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
+import { CreateOrderShippingAddressRequestDto } from './order_shipping_address.request';
+import { CreateOrderItemRequestDto } from './order_item.request';
 
 export class CreateOrderRequestDto {
   @IsObject()
@@ -33,13 +36,15 @@ export class CreateOrderRequestDto {
 
   @IsOptional()
   @IsObject()
+  @Type(() => CreateOrderShippingAddressRequestDto)
   @ValidateNested()
-  shippingAddress?: OrderShippingAddress;
+  shippingAddress?: CreateOrderShippingAddressRequestDto;
 
   @IsOptional()
   @IsArray()
+  @Type(() => CreateOrderItemRequestDto)
   @ValidateNested({ each: true })
-  items?: OrderItem[];
+  items?: CreateOrderItemRequestDto[];
 }
 
 export class UpdateOrderRequestDto {

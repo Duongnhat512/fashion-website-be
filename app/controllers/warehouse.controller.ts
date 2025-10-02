@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import { WarehouseService } from '../services/implements/warehouse.service.implement';
 import { IWarehouseService } from '../services/warehouse.service.interface';
-import { WarehouseRepository } from '../repositories/warehouse.repository';
 import {
   CreateWarehouseRequest,
   UpdateWarehouseRequest,
@@ -12,7 +11,7 @@ import { validate } from 'class-validator';
 export class WarehouseController {
   private readonly warehouseService: IWarehouseService;
   constructor() {
-    this.warehouseService = new WarehouseService(new WarehouseRepository());
+    this.warehouseService = new WarehouseService();
   }
 
   async create(req: Request, res: Response) {

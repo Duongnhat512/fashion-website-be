@@ -1,5 +1,5 @@
+import { Variant } from '../../../models/variant.model';
 import { PaginationResponseDto } from '../pagination.response.dto';
-import { VariantResponseDto } from '../variant/variant.response';
 
 export class ProductResponseDto {
   id: string;
@@ -13,7 +13,7 @@ export class ProductResponseDto {
   tags: string;
   ratingAverage: number;
   ratingCount: number;
-  variants: VariantResponseDto[];
+  variants: Variant[];
   createdAt: Date;
   updatedAt: Date;
 }

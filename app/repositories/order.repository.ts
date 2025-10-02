@@ -6,8 +6,6 @@ import {
 import { OrderResponseDto } from '../dtos/response/order/order.response';
 import { Order } from '../models/order.model';
 import { AppDataSource } from '../config/data_source';
-import { OrderShippingAddress } from '../models/order_shipping_address.model';
-import { OrderItem } from '../models/order_item.model';
 
 export class OrderRepository {
   private readonly orderRepository: Repository<Order>;

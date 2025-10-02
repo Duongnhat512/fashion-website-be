@@ -40,9 +40,6 @@ export class Variant {
   @Column({ type: 'float', name: 'discount_percent', default: 0 })
   discountPercent!: number;
 
-  @Column({ type: 'int' })
-  stock!: number;
-
   @Column({ type: 'varchar', length: 255, name: 'image_url' })
   imageUrl!: string;
 

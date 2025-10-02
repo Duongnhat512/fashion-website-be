@@ -19,7 +19,4 @@ export class CreateOrderShippingAddressRequestDto {
 
   @IsString()
   ward!: string;
-
-  @IsObject()
-  order!: Order;
 }

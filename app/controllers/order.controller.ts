@@ -10,6 +10,9 @@ import { ValidationErrorDto } from '../dtos/response/response.dto';
 import User from '../models/user.model';
 import { Variant } from '../models/variant.model';
 import { Product } from '../models/product.model';
+import { error } from 'console';
+import { CreateOrderShippingAddressRequestDto } from '../dtos/request/order/order_shipping_address.request';
+import { CreateOrderItemRequestDto } from '../dtos/request/order/order_item.request';
 
 export class OrderController {
   private readonly orderService: OrderService;
@@ -32,16 +35,22 @@ export class OrderController {
       createOrderDto.user = { id: req.body.user.id } as User;
 
       if (req.body.shippingAddress) {
-        createOrderDto.shippingAddress = req.body.shippingAddress;
+        const shippingAddressDto = new CreateOrderShippingAddressRequestDto();
+        Object.assign(shippingAddressDto, req.body.shippingAddress);
+        createOrderDto.shippingAddress = shippingAddressDto;
       }
 
       if (req.body.items && req.body.items.length > 0) {
-        createOrderDto.items = req.body.items.map((item: any) => ({
-          quantity: item.quantity,
-          price: item.price,
-          product: { id: item.product.id } as Product,
-          variant: { id: item.variant.id } as Variant,
-        }));
+        createOrderDto.items = req.body.items.map((item: any) => {
+          const itemDto = new CreateOrderItemRequestDto();
+          Object.assign(itemDto, {
+            quantity: item.quantity,
+            price: item.price,
+            product: { id: item.product.id } as Product,
+            variant: { id: item.variant.id } as Variant,
+          });
+          return itemDto;
+        });
       }
 
       const errors = await validate(createOrderDto);
@@ -60,8 +69,7 @@ export class OrderController {
 
       res.status(201).json(ApiResponse.success('Order created', order));
     } catch (error) {
-      console.log('Error in createOrder:', error);
-      res.status(500).json(ApiResponse.error('Internal server error'));
+      res.status(500).json(ApiResponse.error((error as Error).message));
     }
   };
 
@@ -85,7 +93,6 @@ export class OrderController {
       const order = await this.orderService.updateOrder(updateOrderDto);
       res.status(200).json(ApiResponse.success('Order updated', order));
     } catch (error) {
-      console.log(error);
       res.status(500).json(ApiResponse.error('Internal server error'));
     }
   };
@@ -95,7 +102,6 @@ export class OrderController {
       const id = await this.orderService.deleteOrder(req.params.id);
       res.status(200).json(ApiResponse.success('Order deleted', id));
     } catch (error) {
-      console.log(error);
       res.status(500).json(ApiResponse.error('Internal server error'));
     }
   };
@@ -105,7 +111,6 @@ export class OrderController {
       const order = await this.orderService.getOrderById(req.params.id);
       res.status(200).json(ApiResponse.success('Get order by id', order));
     } catch (error) {
-      console.log(error);
       res.status(500).json(ApiResponse.error('Internal server error'));
     }
   };
@@ -119,7 +124,15 @@ export class OrderController {
       );
       res.status(200).json(ApiResponse.success('Get all orders', orders));
     } catch (error) {
-      console.log(error);
+      res.status(500).json(ApiResponse.error('Internal server error'));
+    }
+  };
+
+  cancelOrder = async (req: Request, res: Response) => {
+    try {
+      const order = await this.orderService.cancelOrder(req.params.id);
+      res.status(200).json(ApiResponse.success('Order cancelled', order));
+    } catch (error) {
       res.status(500).json(ApiResponse.error('Internal server error'));
     }
   };
