@@ -4,15 +4,19 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  JoinColumn,
+  ManyToOne,
 } from 'typeorm';
+import User from './user.model';
 
 @Entity({ name: 'addresses' })
 class Address {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ type: 'uuid' })
-  userId!: string;
+  @ManyToOne(() => User, (user) => user.addresses)
+  @JoinColumn({ name: 'user_id' })
+  user!: User;
 
   @Column({ type: 'varchar', length: 255 })
   phone!: string;
@@ -29,7 +33,7 @@ class Address {
   @Column({ type: 'varchar', length: 255 })
   ward!: string;
 
-  @Column({ type: 'varchar', length: 255 })
+  @Column({ type: 'varchar', length: 255, name: 'address_line' })
   addressLine!: string;
 
   @Column({ type: 'boolean', default: false, name: 'is_default' })

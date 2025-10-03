@@ -9,16 +9,26 @@ export class InventoryRepository {
     this.inventoryRepository = AppDataSource.getRepository(Inventory);
   }
 
-  async getInventoryById(id: string): Promise<Inventory> {
+  async getInventoryById(id: string): Promise<Inventory | null> {
     return this.inventoryRepository.findOne({
       where: { id },
       relations: ['warehouse', 'variant'],
-    }) as Promise<Inventory>;
+    });
   }
 
   async getInventoryByVariantId(variantId: string): Promise<Inventory[]> {
     return this.inventoryRepository.find({
       where: { variant: { id: variantId } },
+      relations: ['warehouse', 'variant'],
+    });
+  }
+
+  async getInventoryByVariantIdAndWarehouseId(
+    variantId: string,
+    warehouseId: string,
+  ): Promise<Inventory | null> {
+    return this.inventoryRepository.findOne({
+      where: { variant: { id: variantId }, warehouse: { id: warehouseId } },
       relations: ['warehouse', 'variant'],
     });
   }

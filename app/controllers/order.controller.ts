@@ -10,9 +10,9 @@ import { ValidationErrorDto } from '../dtos/response/response.dto';
 import User from '../models/user.model';
 import { Variant } from '../models/variant.model';
 import { Product } from '../models/product.model';
-import { error } from 'console';
 import { CreateOrderShippingAddressRequestDto } from '../dtos/request/order/order_shipping_address.request';
 import { CreateOrderItemRequestDto } from '../dtos/request/order/order_item.request';
+import OrderStatus from '../models/enum/order_status.enum';
 
 export class OrderController {
   private readonly orderService: OrderService;
@@ -131,9 +131,51 @@ export class OrderController {
   cancelOrder = async (req: Request, res: Response) => {
     try {
       const order = await this.orderService.cancelOrder(req.params.id);
-      res.status(200).json(ApiResponse.success('Order cancelled', order));
+      res.status(200).json(ApiResponse.success('Đã hủy đơn hàng', order));
     } catch (error) {
-      res.status(500).json(ApiResponse.error('Internal server error'));
+      res.status(500).json(ApiResponse.error((error as Error).message));
+    }
+  };
+
+  markOrderAsDelivered = async (req: Request, res: Response) => {
+    try {
+      const order = await this.orderService.updateOrderStatus(
+        req.params.id,
+        OrderStatus.DELIVERED,
+      );
+      res
+        .status(200)
+        .json(
+          ApiResponse.success('Xác nhận đơn hàng đã giao thành công', order),
+        );
+    } catch (error) {
+      res.status(500).json(ApiResponse.error((error as Error).message));
+    }
+  };
+
+  markOrderReadyToShip = async (req: Request, res: Response) => {
+    try {
+      const order = await this.orderService.updateOrderStatus(
+        req.params.id,
+        OrderStatus.READY_TO_SHIP,
+      );
+      res.status(200).json(ApiResponse.success('Đã xác nhận đơn hàng', order));
+    } catch (error) {
+      res.status(500).json(ApiResponse.error((error as Error).message));
+    }
+  };
+
+  confirmOrderAsCompleted = async (req: Request, res: Response) => {
+    try {
+      const order = await this.orderService.updateOrderStatus(
+        req.params.id,
+        OrderStatus.DELIVERED,
+      );
+      res
+        .status(200)
+        .json(ApiResponse.success('Xác nhận đơn hàng đã hoàn thành', order));
+    } catch (error) {
+      res.status(500).json(ApiResponse.error((error as Error).message));
     }
   };
 }

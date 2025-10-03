@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import Role from './enum/role.enum';
 import { Order } from './order.model';
+import Address from './address.model';
 
 @Entity({ name: 'users' })
 export default class User {
@@ -59,4 +60,7 @@ export default class User {
 
   @OneToMany(() => Order, (order) => order.user)
   orders: Order[];
+
+  @OneToMany(() => Address, (address) => address.user)
+  addresses: Address[];
 }

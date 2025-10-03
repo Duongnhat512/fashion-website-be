@@ -6,21 +6,22 @@ import {
 import { OrderResponseDto } from '../../dtos/response/order/order.response';
 import { OrderRepository } from '../../repositories/order.repository';
 import { IOrderService } from '../order.service.interface';
-import { Inventory } from '../../models/inventory.model';
-import { OrderItem } from '../../models/order_item.model';
 import { AppDataSource } from '../../config/data_source';
 import OrderStatus from '../../models/enum/order_status.enum';
 import { InventoryRepository } from '../../repositories/inventory.repository';
+import { OrderItemRepository } from '../../repositories/order_item.repository';
 
 export class OrderService implements IOrderService {
   private readonly orderRepository: OrderRepository;
   private readonly dataSource: DataSource;
   private readonly inventoryRepository: InventoryRepository;
+  private readonly orderItemRepository: OrderItemRepository;
 
   constructor() {
     this.orderRepository = new OrderRepository();
     this.dataSource = AppDataSource;
     this.inventoryRepository = new InventoryRepository();
+    this.orderItemRepository = new OrderItemRepository();
   }
 
   async updateOrder(order: UpdateOrderRequestDto): Promise<OrderResponseDto> {
@@ -96,11 +97,8 @@ export class OrderService implements IOrderService {
 
   async cancelOrder(orderId: string): Promise<void> {
     await this.dataSource.transaction(async (m) => {
-      const invRepo = m.getRepository(Inventory);
-      const oiRepo = m.getRepository(OrderItem);
-
       const order = await this.orderRepository.getOrderById(orderId);
-      if (!order) throw new Error('Order not found');
+      if (!order) throw new Error('Không tìm thấy đơn hàng');
 
       const canCancel =
         order.status === OrderStatus.UNPAID ||
@@ -109,19 +107,16 @@ export class OrderService implements IOrderService {
         throw new Error('Trạng thái đơn hiện tại không cho phép hủy');
       }
 
-      const items = await oiRepo.find({
-        where: { order: { id: orderId } },
-        relations: ['variant', 'warehouse'],
-      });
+      const items = await this.orderItemRepository.getOrderItemsByOrderId(
+        orderId,
+      );
 
       for (const item of items) {
-        const inv = await invRepo.findOne({
-          where: {
-            variant: { id: item.variant.id },
-            warehouse: { id: (item as any).warehouse.id },
-          },
-          lock: { mode: 'pessimistic_write' },
-        });
+        const inv =
+          await this.inventoryRepository.getInventoryByVariantIdAndWarehouseId(
+            item.variant.id,
+            item.warehouse.id,
+          );
         if (!inv) continue;
 
         if (inv.reserved < item.quantity) {
@@ -129,11 +124,23 @@ export class OrderService implements IOrderService {
         }
 
         inv.reserved -= item.quantity;
-        await invRepo.save(inv);
+        await this.inventoryRepository.updateInventory(inv);
       }
 
       order.status = OrderStatus.CANCELLED;
       await this.orderRepository.updateOrder(order);
     });
+  }
+
+  async updateOrderStatus(
+    orderId: string,
+    status: OrderStatus,
+  ): Promise<OrderResponseDto> {
+    const order = await this.orderRepository.getOrderById(orderId);
+    if (!order) throw new Error('Không tìm thấy đơn hàng');
+
+    order.status = status;
+    await this.orderRepository.updateOrder(order);
+    return order;
   }
 }

@@ -22,9 +22,11 @@ export class OrderItem {
   order: Order;
 
   @ManyToOne(() => Product, (product) => product.orderItems)
+  @JoinColumn({ name: 'product_id' })
   product: Product;
 
   @ManyToOne(() => Variant, (variant) => variant.orderItems)
+  @JoinColumn({ name: 'variant_id' })
   variant: Variant;
 
   @Column({ type: 'int', name: 'quantity' })

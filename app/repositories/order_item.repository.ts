@@ -18,4 +18,21 @@ export class OrderItemRepository {
     });
     return newOrderItem;
   }
+
+  async getOrderItemsByOrderId(orderId: string): Promise<OrderItem[]> {
+    return this.orderItemRepository.find({
+      where: { order: { id: orderId } },
+      relations: ['variant', 'warehouse'],
+    });
+  }
+
+  async getOrderItemsByVariantIdAndWarehouseId(
+    variantId: string,
+    warehouseId: string,
+  ): Promise<OrderItem[]> {
+    return this.orderItemRepository.find({
+      where: { variant: { id: variantId }, warehouse: { id: warehouseId } },
+      relations: ['variant', 'warehouse'],
+    });
+  }
 }
