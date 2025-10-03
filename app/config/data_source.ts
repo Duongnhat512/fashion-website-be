@@ -13,6 +13,7 @@ import { OrderShippingAddress } from '../models/order_shipping_address.model';
 import { Warehouse } from '../models/warehouse.model';
 import { StockEntry } from '../models/stock_entry.model';
 import { Inventory } from '../models/inventory.model';
+import { StockEntryItem } from '../models/stock_entry_item.model';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -34,6 +35,7 @@ export const AppDataSource = new DataSource({
     Warehouse,
     StockEntry,
     Inventory,
+    StockEntryItem,
   ],
   synchronize: true,
   logging: false,

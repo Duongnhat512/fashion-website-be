@@ -1,8 +1,12 @@
 import { Repository } from 'typeorm';
 import { Inventory } from '../models/inventory.model';
 import { AppDataSource } from '../config/data_source';
+import {
+  CreateInventoryRequestDto,
+  UpdateInventoryRequestDto,
+} from '../dtos/request/inventory/inventory.request';
 
-export class InventoryRepository {
+export default class InventoryRepository {
   private readonly inventoryRepository: Repository<Inventory>;
 
   constructor() {
@@ -33,7 +37,15 @@ export class InventoryRepository {
     });
   }
 
-  async updateInventory(inventory: Inventory): Promise<Inventory> {
+  async updateInventory(
+    inventory: UpdateInventoryRequestDto,
+  ): Promise<Inventory> {
     return this.inventoryRepository.save(inventory);
+  }
+
+  async createInventory(
+    inventory: CreateInventoryRequestDto,
+  ): Promise<Inventory> {
+    return this.inventoryRepository.create(inventory);
   }
 }

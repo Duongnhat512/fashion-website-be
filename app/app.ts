@@ -12,8 +12,11 @@ import { initRedis } from './config/redis.config';
 import { initializeProductSearch } from './utils/initialize_search';
 import orderRouter from './routers/order.route';
 import { warehouseRouter } from './routers/warehouse.route';
+import stockEntryRouter from './routers/stock_entry.route';
 
 const app: Application = express();
+
+const apiVersion = '/api/v1';
 
 async function initializeApp() {
   try {
@@ -47,11 +50,12 @@ app.get('/', (req, res) => {
   res.send('Hello World');
 });
 
-app.use('/api/v1/auth', authRouter);
-app.use('/api/v1/users', userRouter);
-app.use('/api/v1/categories', categoryRouter);
-app.use('/api/v1/products', productRouter);
-app.use('/api/v1/orders', orderRouter);
-app.use('/api/v1/warehouses', warehouseRouter);
+app.use(`${apiVersion}/auth`, authRouter);
+app.use(`${apiVersion}/users`, userRouter);
+app.use(`${apiVersion}/categories`, categoryRouter);
+app.use(`${apiVersion}/products`, productRouter);
+app.use(`${apiVersion}/orders`, orderRouter);
+app.use(`${apiVersion}/warehouses`, warehouseRouter);
+app.use(`${apiVersion}/stock-entries`, stockEntryRouter);
 
 export default app;

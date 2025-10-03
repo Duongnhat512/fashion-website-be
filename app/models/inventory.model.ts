@@ -12,7 +12,7 @@ import {
 } from 'typeorm';
 import { Warehouse } from './warehouse.model';
 import { Variant } from './variant.model';
-import { StockEntry } from './stock_entry.model';
+import { StockEntryItem } from './stock_entry_item.model';
 
 @Entity({ name: 'inventories' })
 @Unique(['warehouse', 'variant'])
@@ -41,6 +41,6 @@ export class Inventory {
   @UpdateDateColumn({ type: 'timestamptz', name: 'updated_at' })
   updatedAt!: Date;
 
-  @OneToMany(() => StockEntry, (e) => e.inventory)
-  entries!: StockEntry[];
+  @OneToMany(() => StockEntryItem, (e) => e.inventory)
+  stockEntryItems!: StockEntryItem[];
 }

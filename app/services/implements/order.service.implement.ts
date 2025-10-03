@@ -8,7 +8,7 @@ import { OrderRepository } from '../../repositories/order.repository';
 import { IOrderService } from '../order.service.interface';
 import { AppDataSource } from '../../config/data_source';
 import OrderStatus from '../../models/enum/order_status.enum';
-import { InventoryRepository } from '../../repositories/inventory.repository';
+import InventoryRepository from '../../repositories/inventory.repository';
 import { OrderItemRepository } from '../../repositories/order_item.repository';
 
 export class OrderService implements IOrderService {
