@@ -39,7 +39,12 @@ export class CategoryRepository {
   }
 
   async getAll(): Promise<CategoryResponseDto[]> {
-    const categories = await this.categoryRepository.find();
+    const categories = await this.categoryRepository.find({
+      relations: {
+        parent: true,
+        children: true,
+      },
+    });
     if (!categories) {
       throw new Error('Failed to get all categories');
     }

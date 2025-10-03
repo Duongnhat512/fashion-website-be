@@ -48,9 +48,7 @@ export class CategoryService implements ICategoryService {
     return categories;
   }
 
-  private buildCategoryTree(
-    categories: CategoryTreeResponseDto[],
-  ): CategoryTreeResponseDto[] {
+  private buildCategoryTree(categories: Category[]): CategoryTreeResponseDto[] {
     const categoryMap = new Map<string, CategoryTreeResponseDto>();
     const rootCategories: CategoryTreeResponseDto[] = [];
 
@@ -65,8 +63,8 @@ export class CategoryService implements ICategoryService {
     categories.forEach((category) => {
       const categoryNode = categoryMap.get(category.id)!;
 
-      if (category.parentId) {
-        const parent = categoryMap.get(category.parentId);
+      if (category.parent) {
+        const parent = categoryMap.get(category.parent.id);
         if (parent) {
           parent.children?.push(categoryNode);
 
@@ -96,6 +94,6 @@ export class CategoryService implements ICategoryService {
 
   async getTree(): Promise<CategoryTreeResponseDto[]> {
     const categories = await this.categoryRepository.getAll();
-    return this.buildCategoryTree(categories as CategoryTreeResponseDto[]);
+    return this.buildCategoryTree(categories as Category[]);
   }
 }

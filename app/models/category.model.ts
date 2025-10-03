@@ -3,6 +3,8 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  JoinColumn,
+  ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
@@ -44,9 +46,10 @@ export class Category {
   @Column({ type: 'varchar', length: 255 })
   layout!: string;
 
-  @Column({ type: 'varchar', length: 255, name: 'parent_id', nullable: true })
+  @ManyToOne(() => Category, (category) => category.children)
+  @JoinColumn({ name: 'parent_id' })
   @IsOptional()
-  parentId: string;
+  parent: Category;
 
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt!: Date;
@@ -56,4 +59,7 @@ export class Category {
 
   @OneToMany(() => Product, (product) => product.category)
   products!: Product[];
+
+  @OneToMany(() => Category, (category) => category.parent)
+  children!: Category[];
 }

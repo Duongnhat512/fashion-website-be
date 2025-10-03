@@ -223,10 +223,10 @@ export class RedisSearchService {
     const all = await this.categoryRepository.getAll();
     const childrenMap = new Map<string, string[]>();
     for (const c of all) {
-      if (c.parentId) {
-        const arr = childrenMap.get(c.parentId) || [];
+      if (c.parent) {
+        const arr = childrenMap.get(c.parent.id) || [];
         arr.push(c.id);
-        childrenMap.set(c.parentId, arr);
+        childrenMap.set(c.parent.id, arr);
       }
     }
     const result = new Set<string>([rootId]);

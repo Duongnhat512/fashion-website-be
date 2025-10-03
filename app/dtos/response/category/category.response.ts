@@ -7,7 +7,8 @@ export class CategoryResponseDto {
   status!: string;
   slug!: string;
   layout!: string;
-  parentId!: string;
+  parent?: CategoryResponseDto;
+  children?: CategoryResponseDto[];
   createdAt!: Date;
   updatedAt!: Date;
 }
@@ -24,7 +25,7 @@ export class CategoryTreeResponseDto {
   position!: number;
   level!: number;
   layout!: string;
-  parentId?: string;
+  parent?: CategoryTreeResponseDto;
   createdAt!: Date;
   updatedAt!: Date;
   children?: CategoryTreeResponseDto[];
