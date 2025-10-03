@@ -1,4 +1,4 @@
-import { Transform, Type } from 'class-transformer';
+import { Type } from 'class-transformer';
 import {
   IsArray,
   IsEnum,
@@ -40,14 +40,46 @@ export class ImportStockEntryRequestDto {
   totalCost?: number;
 }
 
+export class UpdateStockEntryRequestDto {
+  @IsEnum(StockEntryStatus)
+  @IsOptional()
+  status?: StockEntryStatus;
+
+  @IsEnum(StockEntryType)
+  @IsOptional()
+  type?: StockEntryType;
+
+  @IsString()
+  @IsOptional()
+  supplierName?: string;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => StockImportItemRequestDto)
+  @IsOptional()
+  stockEntryItems?: StockImportItemRequestDto[];
+
+  @IsString()
+  @IsOptional()
+  note?: string;
+
+  @IsNumber()
+  @IsOptional()
+  totalCost?: number;
+}
+
 export class FilterStockEntryRequestDto {
   @IsString()
   @IsOptional()
   id?: string;
 
-  @IsString()
+  @IsEnum(StockEntryStatus)
   @IsOptional()
   status?: StockEntryStatus;
+
+  @IsEnum(StockEntryType)
+  @IsOptional()
+  type?: StockEntryType;
 
   @IsString()
   @IsOptional()

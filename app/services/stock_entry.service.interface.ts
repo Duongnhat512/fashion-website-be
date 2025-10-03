@@ -1,6 +1,7 @@
 import {
   FilterStockEntryRequestDto,
   ImportStockEntryRequestDto,
+  UpdateStockEntryRequestDto,
 } from '../dtos/request/stock_entry/stock_entry.request';
 import { StockEntryResponse } from '../dtos/response/stock_entry/stock_entry.response';
 
@@ -10,7 +11,7 @@ export interface IStockEntryService {
   findById(id: string): Promise<StockEntryResponse>;
   update(
     id: string,
-    stockEntry: Partial<ImportStockEntryRequestDto>,
+    stockEntry: Partial<UpdateStockEntryRequestDto>,
   ): Promise<StockEntryResponse>;
   summit(id: string): Promise<StockEntryResponse>;
   cancel(id: string): Promise<StockEntryResponse>;

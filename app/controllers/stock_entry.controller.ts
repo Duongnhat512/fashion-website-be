@@ -4,6 +4,7 @@ import { ValidationErrorDto } from '../dtos/response/response.dto';
 import {
   FilterStockEntryRequestDto,
   ImportStockEntryRequestDto,
+  UpdateStockEntryRequestDto,
 } from '../dtos/request/stock_entry/stock_entry.request';
 import { IStockEntryService } from '../services/stock_entry.service.interface';
 import { StockEntryServiceImplement } from '../services/implements/stock_entry.service.implement';
@@ -99,6 +100,36 @@ export class StockEntryController {
       res
         .status(200)
         .json(ApiResponse.success('Phiếu nhập kho đã được lọc', result));
+    } catch (error) {
+      res
+        .status(500)
+        .json(
+          ApiResponse.serverError(
+            error instanceof Error ? error.message : 'Internal server error',
+          ),
+        );
+    }
+  };
+
+  updateStockEntry = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const updateData = plainToInstance(UpdateStockEntryRequestDto, req.body);
+
+      const errors = await validate(updateData);
+      if (errors.length > 0) {
+        const validationErrors: ValidationErrorDto[] = errors.map((error) => ({
+          field: error.property,
+          message: Object.values(error.constraints || {}),
+        }));
+        res.status(400).json(ApiResponse.validationError(validationErrors));
+        return;
+      }
+
+      const result = await this.stockEntryService.update(id, updateData);
+      res
+        .status(200)
+        .json(ApiResponse.success('Phiếu nhập kho đã được cập nhật', result));
     } catch (error) {
       res
         .status(500)

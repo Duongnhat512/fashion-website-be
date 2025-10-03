@@ -3,6 +3,7 @@ import StockEntryRepository from '../../repositories/stock_entry.repository';
 import {
   FilterStockEntryRequestDto,
   ImportStockEntryRequestDto,
+  UpdateStockEntryRequestDto,
 } from '../../dtos/request/stock_entry/stock_entry.request';
 import { StockEntryResponse } from '../../dtos/response/stock_entry/stock_entry.response';
 import { DataSource } from 'typeorm';
@@ -11,6 +12,7 @@ import { StockEntry } from '../../models/stock_entry.model';
 import { StockEntryStatus } from '../../models/enum/stock_entry_status.enum';
 import { Inventory } from '../../models/inventory.model';
 import InventoryRepository from '../../repositories/inventory.repository';
+import { StockEntryItem } from '../../models/stock_entry_item.model';
 
 export class StockEntryServiceImplement implements IStockEntryService {
   private readonly stockEntryRepository: StockEntryRepository;
@@ -119,18 +121,52 @@ export class StockEntryServiceImplement implements IStockEntryService {
 
   async update(
     id: string,
-    updatedStockEntry: Partial<ImportStockEntryRequestDto>,
+    updatedStockEntry: Partial<UpdateStockEntryRequestDto>,
   ): Promise<StockEntryResponse> {
-    const stockEntry = await this.stockEntryRepository.findById(id);
-    if (!stockEntry) {
-      throw new Error('Stock entry not found');
-    }
+    return this.dataSource.transaction(async (manager) => {
+      const existingStockEntry = await this.stockEntryRepository.findById(id);
+      if (!existingStockEntry) {
+        throw new Error('Không tìm thấy phiếu nhập kho');
+      }
 
-    const updated = await this.stockEntryRepository.update(
-      id,
-      updatedStockEntry,
-    );
-    return this.mapToResponse(updated!);
+      if (existingStockEntry.status !== StockEntryStatus.DRAFT) {
+        throw new Error(
+          'Chỉ có thể cập nhật phiếu nhập kho ở trạng thái DRAFT',
+        );
+      }
+
+      const { stockEntryItems, ...stockEntryData } = updatedStockEntry;
+
+      if (Object.keys(stockEntryData).length > 0) {
+        await manager.update(StockEntry, id, stockEntryData);
+      }
+
+      if (stockEntryItems) {
+        const totalCost = stockEntryItems.reduce(
+          (total, item) => total + item.quantity * item.unitCost,
+          0,
+        );
+
+        await manager.update(StockEntry, id, { totalCost });
+
+        await manager.delete(StockEntryItem, { stockEntry: { id } });
+
+        const newItems = stockEntryItems.map((item) => {
+          const stockEntryItem = new StockEntryItem();
+          stockEntryItem.stockEntry = { id } as StockEntry;
+          stockEntryItem.inventory = { id: item.inventory.id } as any;
+          stockEntryItem.quantity = item.quantity;
+          stockEntryItem.unitCost = item.unitCost;
+          stockEntryItem.note = item.note;
+          return stockEntryItem;
+        });
+
+        await manager.save(StockEntryItem, newItems);
+      }
+
+      const updated = await this.stockEntryRepository.findById(id);
+      return this.mapToResponse(updated!);
+    });
   }
 
   private mapToResponse(stockEntry: StockEntry): StockEntryResponse {

@@ -4,6 +4,7 @@ import { AppDataSource } from '../config/data_source';
 import {
   FilterStockEntryRequestDto,
   ImportStockEntryRequestDto,
+  UpdateStockEntryRequestDto,
 } from '../dtos/request/stock_entry/stock_entry.request';
 import { StockEntryStatus } from '../models/enum/stock_entry_status.enum';
 
@@ -38,7 +39,7 @@ export default class StockEntryRepository {
 
   async update(
     id: string,
-    updateData: Partial<ImportStockEntryRequestDto>,
+    updateData: Partial<UpdateStockEntryRequestDto>,
   ): Promise<StockEntry | null> {
     await this.stockEntryRepository.update(id, updateData);
     return this.findById(id);
@@ -89,6 +90,12 @@ export default class StockEntryRepository {
     if (filter.variantId) {
       queryBuilder.andWhere('variant.id = :variantId', {
         variantId: filter.variantId,
+      });
+    }
+
+    if (filter.type) {
+      queryBuilder.andWhere('stockEntry.type = :type', {
+        type: filter.type,
       });
     }
 
