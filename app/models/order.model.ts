@@ -32,6 +32,9 @@ export class Order {
   @Column({ type: 'float', name: 'discount' })
   discount: number;
 
+  @Column({ type: 'boolean', name: 'is_cod' })
+  isCOD: boolean;
+
   @Column({ type: 'double precision', name: 'total_amount' })
   totalAmount: number;
 

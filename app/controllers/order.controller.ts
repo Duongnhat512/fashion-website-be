@@ -26,10 +26,9 @@ export class OrderController {
       const createOrderDto = new CreateOrderRequestDto();
       Object.assign(createOrderDto, {
         status: req.body.status,
-        subTotal: req.body.subTotal,
         discount: req.body.discount,
-        totalAmount: req.body.totalAmount,
         shippingFee: req.body.shippingFee,
+        isCOD: req.body.isCOD,
       });
 
       createOrderDto.user = { id: req.body.user.id } as User;
@@ -41,16 +40,19 @@ export class OrderController {
       }
 
       if (req.body.items && req.body.items.length > 0) {
-        createOrderDto.items = req.body.items.map((item: any) => {
-          const itemDto = new CreateOrderItemRequestDto();
-          Object.assign(itemDto, {
-            quantity: item.quantity,
-            price: item.price,
-            product: { id: item.product.id } as Product,
-            variant: { id: item.variant.id } as Variant,
-          });
-          return itemDto;
-        });
+        createOrderDto.items = req.body.items.map(
+          (item: CreateOrderItemRequestDto) => {
+            const itemDto = new CreateOrderItemRequestDto();
+            Object.assign(itemDto, {
+              quantity: item.quantity,
+              rate: item.rate,
+              product: { id: item.product.id } as Product,
+              variant: { id: item.variant.id } as Variant,
+              amount: item.quantity * item.rate,
+            });
+            return itemDto;
+          },
+        );
       }
 
       const errors = await validate(createOrderDto);

@@ -26,9 +26,13 @@ export class StockImportItemRequestDto {
 
   @IsNumber()
   @IsNotEmpty()
-  unitCost!: number;
+  rate!: number;
 
   @IsOptional()
   @IsString()
   note?: string;
+
+  @IsOptional()
+  @IsNumber({}, { message: '' })
+  amount?: number;
 }

@@ -35,8 +35,8 @@ export class ImportStockEntryRequestDto {
   @IsString()
   note?: string;
 
+  @IsOptional()
   @IsNumber()
-  @IsNotEmpty()
   totalCost?: number;
 }
 

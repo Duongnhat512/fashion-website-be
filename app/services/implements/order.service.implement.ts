@@ -70,6 +70,20 @@ export class OrderService implements IOrderService {
           if (!allocated) throw new Error('Không đủ hàng cho sản phẩm.');
         }
 
+        const subTotal = order.items.reduce((sum, item) => {
+          return sum + item.rate * item.quantity;
+        }, 0);
+
+        const discountAmount = subTotal * (order.discount / 100);
+        const totalAmount = subTotal - discountAmount + order.shippingFee;
+
+        order.subTotal = subTotal;
+        order.totalAmount = totalAmount;
+
+        if (order.isCOD) {
+          order.status = OrderStatus.PENDING;
+        }
+
         const createdOrder = await this.orderRepository.createOrder({
           ...order,
           items: order.items?.map((it, idx) => ({

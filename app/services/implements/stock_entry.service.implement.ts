@@ -13,6 +13,7 @@ import { StockEntryStatus } from '../../models/enum/stock_entry_status.enum';
 import { Inventory } from '../../models/inventory.model';
 import InventoryRepository from '../../repositories/inventory.repository';
 import { StockEntryItem } from '../../models/stock_entry_item.model';
+import { StockImportItemRequestDto } from '../../dtos/request/stock_entry/stock_entry_item.request';
 
 export class StockEntryServiceImplement implements IStockEntryService {
   private readonly stockEntryRepository: StockEntryRepository;
@@ -52,7 +53,7 @@ export class StockEntryServiceImplement implements IStockEntryService {
           stockEntry.stockEntryItems.map((item) => ({
             inventory: item.inventory,
             quantity: Math.abs(item.quantity),
-            unitCost: item.unitCost,
+            unitCost: item.rate,
             note: item.note,
           })),
         );
@@ -77,7 +78,7 @@ export class StockEntryServiceImplement implements IStockEntryService {
           stockEntry.stockEntryItems.map((item) => ({
             inventory: item.inventory,
             quantity: -Math.abs(item.quantity),
-            unitCost: item.unitCost,
+            unitCost: item.rate,
             note: item.note,
           })),
         );
@@ -95,11 +96,21 @@ export class StockEntryServiceImplement implements IStockEntryService {
     importData: ImportStockEntryRequestDto,
   ): Promise<StockEntryResponse> {
     return await this.dataSource.transaction(async (manager) => {
+      importData.stockEntryItems = importData.stockEntryItems.map(
+        (item: StockImportItemRequestDto) => {
+          return {
+            ...item,
+            amount: item.quantity * item.rate,
+          };
+        },
+      );
+
       const totalCost = importData.stockEntryItems.reduce(
-        (total, item) => total + item.quantity * item.unitCost,
+        (total, item) => total + item.quantity * item.rate,
         0,
       );
       importData.totalCost = totalCost;
+
       const stockEntry = await this.stockEntryRepository.create(importData);
 
       return this.mapToResponse(stockEntry);
@@ -143,7 +154,7 @@ export class StockEntryServiceImplement implements IStockEntryService {
 
       if (stockEntryItems) {
         const totalCost = stockEntryItems.reduce(
-          (total, item) => total + item.quantity * item.unitCost,
+          (total, item) => total + item.quantity * item.rate,
           0,
         );
 
@@ -156,8 +167,9 @@ export class StockEntryServiceImplement implements IStockEntryService {
           stockEntryItem.stockEntry = { id } as StockEntry;
           stockEntryItem.inventory = { id: item.inventory.id } as any;
           stockEntryItem.quantity = item.quantity;
-          stockEntryItem.unitCost = item.unitCost;
+          stockEntryItem.rate = item.rate;
           stockEntryItem.note = item.note;
+          stockEntryItem.amount = item.quantity * item.rate;
           return stockEntryItem;
         });
 
