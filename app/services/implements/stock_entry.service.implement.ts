@@ -217,11 +217,6 @@ export class StockEntryServiceImplement implements IStockEntryService {
       inventory.onHand += item.quantity;
 
       await this.inventoryRepository.updateInventory(inventory);
-
-      console.log(
-        `Đã cập nhật inventory ${inventory.id}: +${item.quantity} units. ` +
-          `Tổng tồn kho: ${inventory.onHand}`,
-      );
     }
   }
 }

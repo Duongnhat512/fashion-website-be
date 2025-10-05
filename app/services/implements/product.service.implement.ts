@@ -71,16 +71,19 @@ export class ProductService implements IProductService {
   }
 
   async searchProducts(
-    search: string,
+    search?: string,
+    categoryId?: string,
+    sort: string = 'desc',
+    sortBy: string = 'createdAt',
     page: number = 1,
     limit: number = 10,
   ): Promise<PaginatedProductsResponseDto> {
     try {
       const searchResult = await this.redisSearchService.searchProducts(
-        search,
-        undefined,
-        'createdAt',
-        'desc',
+        search || '',
+        categoryId,
+        sortBy,
+        sort,
         page,
         limit,
       );
@@ -101,44 +104,22 @@ export class ProductService implements IProductService {
         'Redis search failed, falling back to database search:',
         error,
       );
-      return this.productRepository.searchProducts(search, page, limit);
-    }
-  }
 
-  async filterProducts(
-    categoryId: string,
-    sort: string = 'desc',
-    sortBy: string = 'createdAt',
-    page: number = 1,
-    limit: number = 10,
-  ): Promise<PaginatedProductsResponseDto> {
-    try {
-      const products = await this.redisSearchService.searchProducts(
-        '',
-        categoryId,
-        sortBy,
-        sort,
-        page,
-        limit,
-      );
-
-      return {
-        products: products.products as ProductResponseDto[],
-        pagination: {
-          total: products.total,
-          totalPages: Math.ceil(products.total / limit),
-          hasNext: page * limit < products.total,
-          hasPrev: page > 1,
-          page,
-          limit,
-        },
-      };
-    } catch (error) {
-      console.error(
-        'Redis search failed, falling back to database search:',
-        error,
-      );
-      return [] as any as PaginatedProductsResponseDto;
+      if (search && !categoryId) {
+        return this.productRepository.searchProducts(search, page, limit);
+      } else {
+        return {
+          products: [],
+          pagination: {
+            total: 0,
+            totalPages: 0,
+            hasNext: false,
+            hasPrev: false,
+            page,
+            limit,
+          },
+        };
+      }
     }
   }
 

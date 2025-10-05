@@ -37,31 +37,25 @@ export class ProductController {
   }
 
   async searchProducts(req: Request, res: Response) {
-    const { search, page = 1, limit = 10 } = req.query;
-    const products = await this.productService.searchProducts(
-      search as string,
-      Number(page),
-      Number(limit),
-    );
-    res.status(200).json(ApiResponse.success('Search products', products));
-  }
-
-  async filterProducts(req: Request, res: Response) {
     const {
+      search,
       categoryId,
       sort = 'desc',
       sortBy = 'createdAt',
       page = 1,
       limit = 10,
     } = req.query;
-    const products = await this.productService.filterProducts(
+
+    const products = await this.productService.searchProducts(
+      search as string,
       categoryId as string,
       sort as string,
       sortBy as string,
       Number(page),
       Number(limit),
     );
-    res.status(200).json(ApiResponse.success('Filter products', products));
+
+    res.status(200).json(ApiResponse.success('Search products', products));
   }
 
   async createProduct(req: Request, res: Response) {

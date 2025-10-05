@@ -1,38 +1,80 @@
 import dotenv from 'dotenv';
+import Joi from 'joi';
 import type { StringValue } from 'ms';
+
 dotenv.config();
 
+// Environment validation schema
+const envSchema = Joi.object({
+  NODE_ENV: Joi.string()
+    .valid('development', 'production', 'test')
+    .default('development'),
+  PORT: Joi.number().default(3000),
+
+  // Database
+  PG_HOST: Joi.string().default('localhost'),
+  PG_PORT: Joi.number().default(5432),
+  PG_USER: Joi.string().required(),
+  PG_PASSWORD: Joi.string().required(),
+  PG_DATABASE: Joi.string().required(),
+
+  // Redis
+  REDIS_HOST: Joi.string().default('localhost'),
+  REDIS_PORT: Joi.number().default(6379),
+  REDIS_PASSWORD: Joi.string().default('redis123'),
+
+  // JWT
+  SECRET_TOKEN: Joi.string(),
+  JWT_ACCESS_TOKEN_EXPIRES_IN: Joi.string().default('15m'),
+  JWT_REFRESH_TOKEN_EXPIRES_IN: Joi.string().default('7d'),
+
+  // Email
+  GOOGLE_SENDER: Joi.string().email().required(),
+  GOOGLE_PASSWORD: Joi.string().required(),
+
+  // Security
+  SALT_ROUNDS: Joi.number().min(10).default(12),
+  ALLOWED_ORIGINS: Joi.string().optional(),
+  ADMIN_IP_WHITELIST: Joi.string().optional(),
+}).unknown();
+
+const { error, value: envVars } = envSchema.validate(process.env);
+
+if (error) {
+  throw new Error(`Config validation error: ${error.message}`);
+}
+
 export const config = {
-  nodeEnv: process.env.NODE_ENV ?? 'development',
-  port: Number(process.env.PORT) || 3000,
+  nodeEnv: envVars.NODE_ENV,
+  port: envVars.PORT,
   pg: {
-    host: process.env.PG_HOST || 'localhost',
-    port: Number(process.env.PG_PORT) || 5432,
-    user: process.env.PG_USER || 'postgres',
-    password: process.env.PG_PASSWORD || 'postgres',
-    database: process.env.PG_DATABASE || 'postgres',
+    host: envVars.PG_HOST,
+    port: envVars.PG_PORT,
+    user: envVars.PG_USER,
+    password: envVars.PG_PASSWORD,
+    database: envVars.PG_DATABASE,
   },
   redisCache: {
-    host: process.env.REDIS_CACHE_HOST || 'localhost',
-    port: Number(process.env.REDIS_CACHE_PORT) || 6379,
+    host: envVars.REDIS_HOST,
+    port: envVars.REDIS_PORT,
+    password: envVars.REDIS_PASSWORD,
   },
   redisQueue: {
-    host: process.env.REDIS_QUEUE_HOST || 'localhost',
-    port: Number(process.env.REDIS_QUEUE_PORT) || 6380,
+    host: envVars.REDIS_HOST,
+    port: envVars.REDIS_PORT + 1,
+    password: envVars.REDIS_PASSWORD,
   },
-  saltRounds: Number(process.env.SALT_ROUNDS) || 10,
-  jwtRefreshTokenExpiresIn:
-    (process.env.JWT_REFRESH_TOKEN_EXPIRES_IN as StringValue) || '7d',
-  jwtAccessTokenExpiresIn:
-    (process.env.JWT_ACCESS_TOKEN_EXPIRES_IN as StringValue) || '15d',
-  secretToken: process.env.SECRET_TOKEN,
+  saltRounds: envVars.SALT_ROUNDS,
+  jwtRefreshTokenExpiresIn: envVars.JWT_REFRESH_TOKEN_EXPIRES_IN as StringValue,
+  jwtAccessTokenExpiresIn: envVars.JWT_ACCESS_TOKEN_EXPIRES_IN as StringValue,
+  secretToken: envVars.SECRET_TOKEN,
   email: {
-    user: process.env.GOOGLE_SENDER,
-    password: process.env.GOOGLE_PASSWORD,
+    user: envVars.GOOGLE_SENDER,
+    password: envVars.GOOGLE_PASSWORD,
   },
   redis: {
-    host: process.env.REDIS_HOST || 'localhost',
-    port: Number(process.env.REDIS_PORT) || 6379,
-    password: process.env.REDIS_PASSWORD || 'redis123',
+    host: envVars.REDIS_HOST,
+    port: envVars.REDIS_PORT,
+    password: envVars.REDIS_PASSWORD,
   },
 };
