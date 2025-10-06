@@ -212,4 +212,21 @@ export class ProductRepository {
       brand: product.brand ?? '',
     }));
   }
+
+  async getAll(): Promise<ProductResponseDto[]> {
+    const products = await this.productRepository.find({
+      relations: {
+        variants: {
+          color: true,
+        },
+        category: true,
+      },
+    });
+    return products.map((product) => ({
+      ...product,
+      categoryId: product.category?.id,
+      category: undefined,
+      brand: product.brand ?? '',
+    }));
+  }
 }

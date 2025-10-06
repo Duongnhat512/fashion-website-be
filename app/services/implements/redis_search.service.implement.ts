@@ -1,247 +1,37 @@
 import redis from '../../config/redis.config';
-import { ProductResponseDto } from '../../dtos/response/product/product.response';
-import { CategoryRepository } from '../../repositories/category.repository';
-import { ProductRepository } from '../../repositories/product.repository';
-import { escapedCategoryId } from '../../utils/product.util';
+import { escapedCategoryId, normalizeText } from '../../utils/product.util';
+import { ICategoryCacheService } from '../category_cache.service.interface';
+import { CategoryCacheService } from './category_cache.service.implement';
 
 export class RedisSearchService {
   private readonly indexName = 'idx:products';
-  private readonly categoryRepository = new CategoryRepository();
-  private readonly productRepository = new ProductRepository();
-  async createIndex(): Promise<void> {
-    try {
-      const exists = await redis.call('FT.INFO', this.indexName);
-      if (exists) {
-        return;
-      }
-    } catch (error) {}
+  private readonly categoryCacheService: ICategoryCacheService;
 
-    try {
-      await redis.call(
-        'FT.CREATE',
-        this.indexName,
-        'ON',
-        'HASH',
-        'PREFIX',
-        '1',
-        'product:',
-        'SCHEMA',
-        'id',
-        'TEXT',
-        'NOSTEM',
-
-        'name',
-        'TEXT',
-        'SORTABLE',
-
-        'brand',
-        'TEXT',
-        'SORTABLE',
-
-        'shortDescription',
-        'TEXT',
-
-        'tags',
-        'TEXT',
-
-        'status',
-        'TAG',
-        'SORTABLE',
-
-        'slug',
-        'TEXT',
-
-        'imageUrl',
-        'TEXT',
-        'NOSTEM',
-
-        'categoryId',
-        'TAG',
-        'SORTABLE',
-
-        'ratingAverage',
-        'NUMERIC',
-        'SORTABLE',
-
-        'ratingCount',
-        'NUMERIC',
-        'SORTABLE',
-
-        'createdAt',
-        'NUMERIC',
-        'SORTABLE',
-
-        'updatedAt',
-        'NUMERIC',
-        'SORTABLE',
-
-        'minPrice',
-        'NUMERIC',
-        'SORTABLE',
-
-        'maxPrice',
-        'NUMERIC',
-        'SORTABLE',
-
-        'variants',
-        'TEXT',
-      );
-    } catch (error) {
-      console.error('Error creating product search index:', error);
-      throw error;
-    }
-  }
-
-  private getMinPrice(variants: any[]): number {
-    if (!variants || variants.length === 0) return 0;
-    const prices = variants
-      .map((v) => (v.onSales ? v.discountPrice : v.price))
-      .filter((p) => p > 0);
-    return prices.length > 0 ? Math.min(...prices) : 0;
-  }
-
-  private getMaxPrice(variants: any[]): number {
-    if (!variants || variants.length === 0) return 0;
-    const prices = variants
-      .map((v) => (v.onSales ? v.discountPrice : v.price))
-      .filter((p) => p > 0);
-    return prices.length > 0 ? Math.max(...prices) : 0;
-  }
-
-  async indexProduct(product: ProductResponseDto): Promise<void> {
-    try {
-      const productData = {
-        id: product.id,
-        name: product.name,
-        slug: product.slug,
-        shortDescription: product.shortDescription,
-        imageUrl: product.imageUrl,
-        brand: product.brand || '',
-        tags: product.tags || '',
-        categoryId: product.categoryId || '',
-        status: product.status || 'active',
-        ratingAverage: product.ratingAverage,
-        ratingCount: product.ratingCount,
-        createdAt: product.createdAt.getTime(),
-        updatedAt: product.updatedAt.getTime(),
-        minPrice: this.getMinPrice(product.variants || []),
-        maxPrice: this.getMaxPrice(product.variants || []),
-        variants: JSON.stringify(product.variants || []),
-      };
-
-      await redis.hset(`product:${product.id}`, productData);
-    } catch (error) {
-      console.error('Error indexing product:', error);
-      throw error;
-    }
-  }
-
-  async removeProduct(productId: string): Promise<void> {
-    const key = `product:${productId}`;
-    try {
-      const delCount = await redis.del(key);
-      if (delCount === 0) {
-        console.error(`Redis hash not found: ${key}`);
-      }
-
-      try {
-        await redis.call('FT.DEL', this.indexName, key);
-      } catch (e: any) {
-        console.error('Error removing product from index:', e);
-      }
-    } catch (error) {
-      console.error('Error removing product from Redis:', error);
-      throw error;
-    }
-  }
-
-  private normalizeText(text: string): string {
-    if (!text) return '';
-
-    return text
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/đ/g, 'd')
-      .replace(/Đ/g, 'D')
-      .replace(/\s+/g, ' ')
-      .trim();
+  constructor() {
+    this.categoryCacheService = new CategoryCacheService();
   }
 
   private buildSearchQuery(query: string): string {
-    if (!query || query.trim() === '') {
-      return '*';
-    }
+    if (!query || query.trim() === '') return '*';
 
-    const normalizedQuery = this.normalizeText(query);
-    const originalQuery = query.toLowerCase().trim();
+    const normalizedQuery = normalizeText(query);
+    const words = normalizedQuery.split(/\s+/).filter(Boolean);
+    if (words.length === 0) return '*';
 
-    const words = normalizedQuery
-      .split(/\s+/)
-      .filter((word) => word.length > 0);
+    const fields = [
+      'nameNormalized',
+      'shortDescriptionNormalized',
+      'brandNormalized',
+      'tagsNormalized',
+    ];
 
-    if (words.length === 0) {
-      return '*';
-    }
-
-    const searchTerms: string[] = [];
-
-    if (words.length > 1) {
-      searchTerms.push(`@name:"${normalizedQuery}"`);
-      searchTerms.push(`@shortDescription:"${normalizedQuery}"`);
-      searchTerms.push(`@brand:"${normalizedQuery}"`);
-      searchTerms.push(`@tags:"${normalizedQuery}"`);
-
-      searchTerms.push(`@name:"${originalQuery}"`);
-      searchTerms.push(`@shortDescription:"${originalQuery}"`);
-      searchTerms.push(`@brand:"${originalQuery}"`);
-      searchTerms.push(`@tags:"${originalQuery}"`);
-    }
-
-    words.forEach((word) => {
-      searchTerms.push(`@name:(${word}*)`);
-      searchTerms.push(`@shortDescription:(${word}*)`);
-      searchTerms.push(`@brand:(${word}*)`);
-      searchTerms.push(`@tags:(${word}*)`);
+    const groups = words.map((w) => {
+      const ors = fields.map((f) => `@${f}:(${w}*)`).join(' | ');
+      return `(${ors})`;
     });
 
-    const originalWords = originalQuery
-      .split(/\s+/)
-      .filter((word) => word.length > 0);
-    originalWords.forEach((word) => {
-      searchTerms.push(`@name:(${word}*)`);
-      searchTerms.push(`@shortDescription:(${word}*)`);
-      searchTerms.push(`@brand:(${word}*)`);
-      searchTerms.push(`@tags:(${word}*)`);
-    });
-
-    const finalQuery = searchTerms.join(' | ');
-    return finalQuery + ' ';
-  }
-
-  private async getDescendantCategoryIds(rootId: string): Promise<string[]> {
-    const all = await this.categoryRepository.getAll();
-    const childrenMap = new Map<string, string[]>();
-    for (const c of all) {
-      if (c.parent) {
-        const arr = childrenMap.get(c.parent.id) || [];
-        arr.push(c.id);
-        childrenMap.set(c.parent.id, arr);
-      }
-    }
-    const result = new Set<string>([rootId]);
-    const stack = [rootId];
-    while (stack.length) {
-      const cur = stack.pop()!;
-      const kids = childrenMap.get(cur) || [];
-      for (const kid of kids) {
-        if (!result.has(kid)) {
-          result.add(kid);
-          stack.push(kid);
-        }
-      }
-    }
-    return Array.from(result);
+    const finalQuery = groups.join(' ');
+    return finalQuery;
   }
 
   async searchProducts(
@@ -263,12 +53,20 @@ export class RedisSearchService {
       }
 
       if (categoryId) {
-        const ids = await this.getDescendantCategoryIds(categoryId);
+        const ids = await this.categoryCacheService.getDescendantCategoryIds(
+          categoryId,
+        );
         const tag = ids.map((id) => escapedCategoryId(id)).join('|');
-        searchQuery += `@categoryId:{${tag}} `;
+        const categoryFilter = `@categoryId:{${tag}}`;
+        searchQuery = searchQuery
+          ? `${searchQuery} ${categoryFilter}`
+          : categoryFilter;
       }
 
-      searchQuery += `@status:{active} `;
+      const statusFilter = `@status:{active}`;
+      searchQuery = searchQuery
+        ? `${searchQuery} ${statusFilter}`
+        : statusFilter;
 
       let sortField = 'createdAt';
       if (sortBy === 'ratingAverage') {
@@ -335,26 +133,8 @@ export class RedisSearchService {
         total,
       };
     } catch (error) {
+      console.error('Search error:', error);
       throw error;
     }
-  }
-
-  async reindexAllProducts(): Promise<void> {
-    try {
-      await this.resetIndex();
-      const products = await this.productRepository.getAllProductsForIndexing();
-      for (const product of products) {
-        await this.indexProduct(product);
-      }
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  async resetIndex(): Promise<void> {
-    try {
-      await redis.call('FT.DROPINDEX', this.indexName);
-    } catch (error) {}
-    await this.createIndex();
   }
 }

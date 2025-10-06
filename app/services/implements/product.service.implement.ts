@@ -9,14 +9,18 @@ import {
   UpdateProductRequestDto,
 } from '../../dtos/request/product/product.request';
 import { RedisSearchService } from './redis_search.service.implement';
+import { IProductCacheService } from '../product_cache.service.interface';
+import { ProductCacheService } from './product_cache.service.implement';
 
 export class ProductService implements IProductService {
   private readonly productRepository: ProductRepository;
   private readonly redisSearchService: RedisSearchService;
+  private readonly productCacheService: IProductCacheService;
 
   constructor() {
     this.productRepository = new ProductRepository();
     this.redisSearchService = new RedisSearchService();
+    this.productCacheService = new ProductCacheService();
   }
 
   async createProduct(product: ProductRequestDto): Promise<ProductResponseDto> {
@@ -26,7 +30,7 @@ export class ProductService implements IProductService {
       const productEntity = await this.productRepository.getProductEntityById(
         newProduct.id,
       );
-      await this.redisSearchService.indexProduct(productEntity);
+      await this.productCacheService.indexProduct(productEntity);
     } catch (error) {
       console.error('Error indexing new product:', error);
     }
@@ -42,7 +46,7 @@ export class ProductService implements IProductService {
     let updatedProduct: ProductResponseDto = {} as ProductResponseDto;
     try {
       updatedProduct = await this.productRepository.getProductById(product.id);
-      await this.redisSearchService.indexProduct(updatedProduct);
+      await this.productCacheService.indexProduct(updatedProduct);
     } catch (error) {
       console.error('Error updating product index:', error);
     }
@@ -53,7 +57,7 @@ export class ProductService implements IProductService {
     await this.productRepository.deleteProduct(id);
 
     try {
-      await this.redisSearchService.removeProduct(id);
+      await this.productCacheService.removeProduct(id);
     } catch (error) {
       console.error('Error removing product from index:', error);
     }
@@ -125,7 +129,7 @@ export class ProductService implements IProductService {
 
   async initializeSearchIndex(): Promise<void> {
     try {
-      await this.redisSearchService.reindexAllProducts();
+      await this.productCacheService.reindexAllProducts();
     } catch (error) {
       console.error('Error initializing search index:', error);
       throw error;
