@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { OrderService } from '../services/implements/order.service.implement';
+import { OrderService } from '../services/order/implements/order.service.implement';
 import {
   CreateOrderRequestDto,
   UpdateOrderRequestDto,

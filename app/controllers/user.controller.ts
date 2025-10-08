@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import { UserService } from '../services/implements/user.service.implement';
-import { IUserService } from '../services/user.service.interface';
+import { UserService } from '../services/user/implements/user.service.implement';
+import { IUserService } from '../services/user/user.service.interface';
 import {
   CreateUserRequestDto,
   LoginRequestDto,

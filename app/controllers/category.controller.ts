@@ -1,5 +1,5 @@
 import { Category } from '../models/category.model';
-import { CategoryService } from '../services/implements/category.service.implement';
+import { CategoryService } from '../services/category/implements/category.service.implement';
 import { Request, Response } from 'express';
 import { ApiResponse } from '../dtos/response/api.response.dto';
 import { CreateCategoryRequestDto } from '../dtos/request/category/category.request';

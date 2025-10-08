@@ -1,14 +1,14 @@
 import { Request, Response } from 'express';
-import { IAuthService } from '../services/auth.service.interface';
-import { AuthService } from '../services/implements/auth.service.implement';
+import { IAuthService } from '../services/auth/auth.service.interface';
+import { AuthService } from '../services/auth/implements/auth.service.implement';
 import { LoginRequestDto } from '../dtos/request/user/user.request.dto';
 import { validate } from 'class-validator';
 import { ValidationErrorDto } from '../dtos/response/response.dto';
 import { ApiResponse } from '../dtos/response/api.response.dto';
-import { IEmailService } from '../services/email.service.interface';
-import { EmailService } from '../services/implements/email.service.implement';
-import { OtpService } from '../services/implements/opt.service.implement';
-import IOtpService from '../services/otp.service.interface';
+import { IEmailService } from '../services/email/email.service.interface';
+import { EmailService } from '../services/email/implements/email.service.implement';
+import { OtpService } from '../services/otp/implements/opt.service.implement';
+import IOtpService from '../services/otp/otp.service.interface';
 
 export class AuthController {
   private readonly authService: IAuthService;

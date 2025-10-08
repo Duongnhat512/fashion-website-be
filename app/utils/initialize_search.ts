@@ -1,4 +1,4 @@
-import { ProductService } from '../services/implements/product.service.implement';
+import { ProductService } from '../services/product/implements/product.service.implement';
 
 export async function initializeProductSearch(): Promise<void> {
   try {

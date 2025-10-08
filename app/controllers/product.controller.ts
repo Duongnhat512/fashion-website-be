@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
-import { IProductService } from '../services/product.service.interface';
+import { IProductService } from '../services/product/product.service.interface';
 import { ApiResponse } from '../dtos/response/api.response.dto';
-import { ProductService } from '../services/implements/product.service.implement';
+import { ProductService } from '../services/product/implements/product.service.implement';
 import {
   ProductRequestDto,
   UpdateProductRequestDto,

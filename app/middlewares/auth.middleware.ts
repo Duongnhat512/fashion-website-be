@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import { ApiResponse } from '../dtos/response/api.response.dto';
 import { TokenPayloadDto } from '../dtos/response/auth/auth.response.dto';
-import { AuthService } from '../services/implements/auth.service.implement';
+import { AuthService } from '../services/auth/implements/auth.service.implement';
 import Role from '../models/enum/role.enum';
 
 declare global {

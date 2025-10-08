@@ -6,8 +6,8 @@ import {
   ImportStockEntryRequestDto,
   UpdateStockEntryRequestDto,
 } from '../dtos/request/stock_entry/stock_entry.request';
-import { IStockEntryService } from '../services/stock_entry.service.interface';
-import { StockEntryServiceImplement } from '../services/implements/stock_entry.service.implement';
+import { IStockEntryService } from '../services/stock_entry/stock_entry.service.interface';
+import { StockEntryServiceImplement } from '../services/stock_entry/implements/stock_entry.service.implement';
 import { ApiResponse } from '../dtos/response/api.response.dto';
 import { plainToInstance } from 'class-transformer';
 

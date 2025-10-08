@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import { WarehouseService } from '../services/implements/warehouse.service.implement';
-import { IWarehouseService } from '../services/warehouse.service.interface';
+import { WarehouseService } from '../services/warehouse/implements/warehouse.service.implement';
+import { IWarehouseService } from '../services/warehouse/warehouse.service.interface';
 import {
   CreateWarehouseRequest,
   UpdateWarehouseRequest,
