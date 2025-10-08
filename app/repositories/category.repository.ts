@@ -1,10 +1,8 @@
-import {
-  CategoryResponseDto,
-  CategoryTreeResponseDto,
-} from '../dtos/response/category/category.response';
+import { CategoryResponseDto } from '../dtos/response/category/category.response';
 import { Category } from '../models/category.model';
-import { IsNull, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { AppDataSource } from '../config/data_source';
+import { CreateCategoryRequestDto } from '../dtos/request/category/category.request';
 
 export class CategoryRepository {
   private readonly categoryRepository: Repository<Category>;
@@ -13,7 +11,9 @@ export class CategoryRepository {
     this.categoryRepository = AppDataSource.getRepository(Category);
   }
 
-  async create(category: Category): Promise<CategoryResponseDto> {
+  async create(
+    category: CreateCategoryRequestDto,
+  ): Promise<CategoryResponseDto> {
     const newCategory = await this.categoryRepository.save(category);
     if (!newCategory) {
       throw new Error('Failed to create category');
@@ -31,7 +31,13 @@ export class CategoryRepository {
   }
 
   async getById(id: string): Promise<CategoryResponseDto> {
-    const category = await this.categoryRepository.findOne({ where: { id } });
+    const category = await this.categoryRepository.findOne({
+      where: { id },
+      relations: {
+        parent: true,
+        children: true,
+      },
+    });
     if (!category) {
       throw new Error('Category not found');
     }
@@ -49,5 +55,17 @@ export class CategoryRepository {
       throw new Error('Failed to get all categories');
     }
     return categories;
+  }
+
+  async getBySlug(slug: string): Promise<Category | null> {
+    return await this.categoryRepository.findOne({
+      where: { slug },
+    });
+  }
+
+  async getChildrenCount(parentId: string | null): Promise<number> {
+    return await this.categoryRepository.count({
+      where: { parent: parentId ? { id: parentId } : undefined },
+    });
   }
 }

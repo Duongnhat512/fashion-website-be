@@ -24,7 +24,7 @@ export class ProductController {
   async getProductById(req: Request, res: Response) {
     const { id } = req.params;
     const product = await this.productService.getProductById(id);
-    res.status(200).json(ApiResponse.success('Get product by id', product));
+    res.status(200).json(ApiResponse.success('Thông tin sản phẩm', product));
   }
 
   async getAllProducts(req: Request, res: Response) {
@@ -33,7 +33,7 @@ export class ProductController {
       Number(page),
       Number(limit),
     );
-    res.status(200).json(ApiResponse.success('Get all products', products));
+    res.status(200).json(ApiResponse.success('Danh sách sản phẩm', products));
   }
 
   async searchProducts(req: Request, res: Response) {
@@ -55,7 +55,7 @@ export class ProductController {
       Number(limit),
     );
 
-    res.status(200).json(ApiResponse.success('Search products', products));
+    res.status(200).json(ApiResponse.success('Tìm kiếm sản phẩm', products));
   }
 
   async createProduct(req: Request, res: Response) {
@@ -87,12 +87,12 @@ export class ProductController {
       }
 
       const product = await this.productService.createProduct(createProductDto);
-      res.status(200).json(ApiResponse.success('Create product', product));
+      res.status(200).json(ApiResponse.success('Tạo sản phẩm', product));
     } catch (error) {
       res.status(500).json(
-        ApiResponse.error('Create product', [
+        ApiResponse.error('Tạo sản phẩm', [
           {
-            message: 'Create product failed',
+            message: 'Tạo sản phẩm thất bại',
             field: 'createProduct',
           },
         ]),
@@ -125,17 +125,28 @@ export class ProductController {
       }));
       return res
         .status(400)
-        .json(ApiResponse.error('Validation errors', validationErrors));
+        .json(ApiResponse.error('Lỗi xác thực', validationErrors));
     }
 
     const product = await this.productService.updateProduct(updateProductDto);
-    res.status(200).json(ApiResponse.success('Update product', product));
+    res.status(200).json(ApiResponse.success('Cập nhật sản phẩm', product));
   }
 
   async deleteProduct(req: Request, res: Response) {
-    const { id } = req.params;
+    try {
+      const { id } = req.params;
 
-    await this.productService.deleteProduct(id);
-    res.status(200).json(ApiResponse.success('Delete product', null));
+      await this.productService.deleteProduct(id);
+      res.status(200).json(ApiResponse.success('Xóa sản phẩm', null));
+    } catch (error) {
+      res.status(500).json(
+        ApiResponse.error('Xóa sản phẩm', [
+          {
+            message: 'Xóa sản phẩm thất bại',
+            field: 'deleteProduct',
+          },
+        ]),
+      );
+    }
   }
 }

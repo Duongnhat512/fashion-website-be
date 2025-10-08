@@ -37,12 +37,6 @@ export class Category {
   @Column({ type: 'boolean', default: false, name: 'auto_gen_seo_description' })
   autoGenSeoDescription!: boolean;
 
-  @Column({ type: 'int', default: 0 })
-  position!: number;
-
-  @Column({ type: 'int', default: 0 })
-  level!: number;
-
   @Column({ type: 'varchar', length: 255 })
   layout!: string;
 

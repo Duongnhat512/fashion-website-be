@@ -64,12 +64,12 @@ export class OrderController {
         }));
         return res
           .status(400)
-          .json(ApiResponse.error('Validation errors', validationErrors));
+          .json(ApiResponse.error('Lỗi xác thực', validationErrors));
       }
 
       const order = await this.orderService.createOrder(createOrderDto);
 
-      res.status(201).json(ApiResponse.success('Order created', order));
+      res.status(201).json(ApiResponse.success('Tạo đơn hàng', order));
     } catch (error) {
       res.status(500).json(ApiResponse.error((error as Error).message));
     }
@@ -89,11 +89,11 @@ export class OrderController {
 
         return res
           .status(400)
-          .json(ApiResponse.error('Validation errors', validationErrors));
+          .json(ApiResponse.error('Lỗi xác thực', validationErrors));
       }
 
       const order = await this.orderService.updateOrder(updateOrderDto);
-      res.status(200).json(ApiResponse.success('Order updated', order));
+      res.status(200).json(ApiResponse.success('Cập nhật đơn hàng', order));
     } catch (error) {
       res.status(500).json(ApiResponse.error('Internal server error'));
     }
@@ -102,7 +102,7 @@ export class OrderController {
   deleteOrder = async (req: Request, res: Response) => {
     try {
       const id = await this.orderService.deleteOrder(req.params.id);
-      res.status(200).json(ApiResponse.success('Order deleted', id));
+      res.status(200).json(ApiResponse.success('Xóa đơn hàng', id));
     } catch (error) {
       res.status(500).json(ApiResponse.error('Internal server error'));
     }
@@ -111,7 +111,7 @@ export class OrderController {
   getOrderById = async (req: Request, res: Response) => {
     try {
       const order = await this.orderService.getOrderById(req.params.id);
-      res.status(200).json(ApiResponse.success('Get order by id', order));
+      res.status(200).json(ApiResponse.success('Thông tin đơn hàng', order));
     } catch (error) {
       res.status(500).json(ApiResponse.error('Internal server error'));
     }
@@ -124,7 +124,7 @@ export class OrderController {
         Number(page),
         Number(limit),
       );
-      res.status(200).json(ApiResponse.success('Get all orders', orders));
+      res.status(200).json(ApiResponse.success('Danh sách đơn hàng', orders));
     } catch (error) {
       res.status(500).json(ApiResponse.error('Internal server error'));
     }
@@ -135,7 +135,14 @@ export class OrderController {
       const order = await this.orderService.cancelOrder(req.params.id);
       res.status(200).json(ApiResponse.success('Đã hủy đơn hàng', order));
     } catch (error) {
-      res.status(500).json(ApiResponse.error((error as Error).message));
+      res.status(500).json(
+        ApiResponse.error('Lỗi hủy đơn hàng', [
+          {
+            field: 'cancelOrder',
+            message: 'Lỗi hủy đơn hàng',
+          },
+        ]),
+      );
     }
   };
 
@@ -151,7 +158,14 @@ export class OrderController {
           ApiResponse.success('Xác nhận đơn hàng đã giao thành công', order),
         );
     } catch (error) {
-      res.status(500).json(ApiResponse.error((error as Error).message));
+      res.status(500).json(
+        ApiResponse.error('Lỗi xác nhận đơn hàng', [
+          {
+            field: 'markOrderAsDelivered',
+            message: 'Lỗi xác nhận đơn hàng',
+          },
+        ]),
+      );
     }
   };
 
@@ -163,7 +177,14 @@ export class OrderController {
       );
       res.status(200).json(ApiResponse.success('Đã xác nhận đơn hàng', order));
     } catch (error) {
-      res.status(500).json(ApiResponse.error((error as Error).message));
+      res.status(500).json(
+        ApiResponse.error('Lỗi xác nhận đơn hàng', [
+          {
+            field: 'markOrderReadyToShip',
+            message: 'Lỗi xác nhận đơn hàng',
+          },
+        ]),
+      );
     }
   };
 

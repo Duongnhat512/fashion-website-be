@@ -1,5 +1,3 @@
-import { IsArray, IsDate, IsNotEmpty, IsString } from 'class-validator';
-
 export class CategoryResponseDto {
   id!: string;
   name!: string;
@@ -7,6 +5,9 @@ export class CategoryResponseDto {
   status!: string;
   slug!: string;
   layout!: string;
+  autoGenSlug!: boolean;
+  autoGenSeoTitle!: boolean;
+  autoGenSeoDescription!: boolean;
   parent?: CategoryResponseDto;
   children?: CategoryResponseDto[];
   createdAt!: Date;
@@ -22,8 +23,6 @@ export class CategoryTreeResponseDto {
   autoGenSlug!: boolean;
   autoGenSeoTitle!: boolean;
   autoGenSeoDescription!: boolean;
-  position!: number;
-  level!: number;
   layout!: string;
   parent?: CategoryTreeResponseDto;
   createdAt!: Date;

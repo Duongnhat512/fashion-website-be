@@ -1,3 +1,4 @@
+import { CreateCategoryRequestDto } from '../../dtos/request/category/category.request';
 import {
   CategoryResponseDto,
   CategoryTreeResponseDto,
@@ -5,15 +6,19 @@ import {
 import { Category } from '../../models/category.model';
 import { CategoryRepository } from '../../repositories/category.repository';
 import { ICategoryService } from '../category.service.interface';
-
+import slugify from 'slugify';
 export class CategoryService implements ICategoryService {
   private readonly categoryRepository: CategoryRepository;
   constructor() {
     this.categoryRepository = new CategoryRepository();
   }
 
-  async create(category: Category): Promise<CategoryResponseDto> {
-    const newCategory = await this.categoryRepository.create(category);
+  async create(
+    category: CreateCategoryRequestDto,
+  ): Promise<CategoryResponseDto> {
+    const categoryData = await this.fillMissingFields(category);
+    const newCategory = await this.categoryRepository.create(categoryData);
+
     if (!newCategory) {
       throw new Error('Failed to create category');
     }
@@ -75,25 +80,54 @@ export class CategoryService implements ICategoryService {
       }
     });
 
-    const sortCategories = (cats: CategoryTreeResponseDto[]) => {
-      cats.sort((a, b) => {
-        if (a.level !== b.level) return a.level - b.level;
-        return a.position - b.position;
-      });
-
-      cats.forEach((cat) => {
-        if (cat.children && cat.children.length > 0) {
-          sortCategories(cat.children);
-        }
-      });
-    };
-
-    sortCategories(rootCategories);
     return rootCategories;
   }
 
   async getTree(): Promise<CategoryTreeResponseDto[]> {
     const categories = await this.categoryRepository.getAll();
     return this.buildCategoryTree(categories as Category[]);
+  }
+
+  private async fillMissingFields(
+    category: CreateCategoryRequestDto,
+  ): Promise<CreateCategoryRequestDto> {
+    const result = { ...category };
+
+    let parent: CategoryResponseDto | null = null;
+    if (category.parent?.id) {
+      parent = await this.categoryRepository.getById(category.parent.id);
+      if (!parent) {
+        throw new Error('Parent category not found');
+      }
+    }
+
+    if (!result.slug) {
+      let baseSlug = slugify(category.name, {
+        lower: true,
+        strict: true,
+        remove: /[*+~.()'"!:@]/g,
+      });
+
+      let finalSlug = baseSlug;
+      let counter = 1;
+      while (await this.categoryRepository.getBySlug(finalSlug)) {
+        finalSlug = `${baseSlug}-${counter}`;
+        counter++;
+      }
+      result.slug = finalSlug;
+    }
+
+    result.status = result.status || 'active';
+    result.layout = result.layout || 'vertical';
+    result.autoGenSlug =
+      result.autoGenSlug !== undefined ? result.autoGenSlug : true;
+    result.autoGenSeoTitle =
+      result.autoGenSeoTitle !== undefined ? result.autoGenSeoTitle : true;
+    result.autoGenSeoDescription =
+      result.autoGenSeoDescription !== undefined
+        ? result.autoGenSeoDescription
+        : true;
+
+    return result;
   }
 }
