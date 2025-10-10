@@ -37,12 +37,13 @@ export class EmailService implements IEmailService {
 
   async readHtmlTemplate(templatename: string, data: any) {
     try {
-      const templatePath = path.join(
-        __dirname,
-        '../..',
-        'html',
+      const templatePath = path.resolve(
+        process.cwd(),
+        'app/html',
         `${templatename}.html`,
       );
+
+      console.log('Template Path:', templatePath); // Log the template path for debugging
       const htmlSource = readFileSync(templatePath, 'utf-8');
       const template = Handlebars.compile(htmlSource);
       const html = template(data);

@@ -45,8 +45,7 @@ export default class User {
   status!: boolean;
 
   @Column({
-    type: 'varchar',
-    length: 255,
+    type: 'text',
     nullable: true,
     name: 'refresh_token',
   })

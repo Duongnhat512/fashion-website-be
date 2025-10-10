@@ -10,6 +10,10 @@ export class UpdateUserResponseDto {
   fullname!: string;
   email!: string;
   role!: string;
+  dob?: Date;
+  gender?: string;
+  phone?: string;
+  avt?: string;
 }
 
 export class LoginUserResponseDto {
@@ -27,5 +31,9 @@ export class GetUserResponseDto {
   id!: string;
   fullname!: string;
   email!: string;
+  dob?: Date;
+  gender?: string;
+  phone?: string;
+  avt?: string;
   role!: string;
 }
