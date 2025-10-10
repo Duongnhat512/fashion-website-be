@@ -43,6 +43,8 @@ export class EmailService implements IEmailService {
         'html',
         `${templatename}.html`,
       );
+
+      console.log('Template Path:', templatePath); // Log the template path for debugging
       const htmlSource = readFileSync(templatePath, 'utf-8');
       const template = Handlebars.compile(htmlSource);
       const html = template(data);

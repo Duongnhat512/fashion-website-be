@@ -10,7 +10,7 @@ export const securityConfig = {
       'https://your-app-git-main.vercel.app', // Vercel preview
       'https://your-app-git-feature-branch.vercel.app', // Feature branches
       ...(config.nodeEnv === 'development'
-        ? ['http://localhost:3636', 'http://localhost:3001']
+        ? ['http://localhost:3636', 'http://localhost:5174']
         : []),
     ],
     credentials: true,

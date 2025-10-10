@@ -51,7 +51,7 @@ export class AuthController {
     try {
       const otp = this.otpService.generateOtp();
       this.otpService.setOtp(email, otp);
-
+      console.log('OTP generated:', otp); // Log OTP to console for debugging
       const htmlTemplate = await this.emailService.readHtmlTemplate(
         'email_template',
         {
@@ -59,6 +59,7 @@ export class AuthController {
           username: email.split('@')[0],
         },
       );
+      console.log('HTML Template:', htmlTemplate); // Log HTML template for debugging
       const emailData = {
         to: email,
         subject: 'Mã OTP xác thực tài khoản - BooBoo',
@@ -78,6 +79,8 @@ export class AuthController {
           ),
         );
     } catch (error) {
+      console.error('Error in sendOtp:', error); // Log error for debugging
+      
       res.status(500).json(ApiResponse.error('Lỗi khi gửi OTP'));
     }
   }

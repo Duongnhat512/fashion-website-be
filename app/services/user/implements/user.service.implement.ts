@@ -35,15 +35,24 @@ export class UserService implements IUserService {
   async updateUser(
     updateUserDto: UpdateUserRequestDto,
   ): Promise<UpdateUserResponseDto> {
+    
     const user = await this.userRepository.updateUser(updateUserDto);
     if (!user) {
       throw new Error('User not found');
     }
+    const updatedUser = await this.userRepository.findById(updateUserDto.id); 
+    if (!updatedUser) {
+      throw new Error('User not found after update');
+    }
     return {
-      id: user.generatedMaps[0].id,
-      fullname: user.generatedMaps[0].fullname,
-      email: user.generatedMaps[0].email,
-      role: user.generatedMaps[0].role,
+      id: updatedUser.id,
+      fullname: updatedUser.fullname,
+      email: updatedUser.email,
+      dob: updatedUser.dob,
+      gender: updatedUser.gender,
+      phone: updatedUser.phone,
+      avt: updatedUser.avt,
+      role: updatedUser.role,
     };
   }
   async deleteUser(id: string): Promise<void> {
@@ -63,6 +72,10 @@ export class UserService implements IUserService {
       id: user.id,
       fullname: user.fullname,
       email: user.email,
+      dob: user.dob,
+      gender: user.gender,
+      phone: user.phone,
+      avt: user.avt,
       role: user.role,
     };
   }
