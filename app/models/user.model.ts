@@ -10,6 +10,7 @@ import {
 import Role from './enum/role.enum';
 import { Order } from './order.model';
 import Address from './address.model';
+import Cart from './cart.model';
 
 @Entity({ name: 'users' })
 export default class User {
@@ -63,4 +64,7 @@ export default class User {
 
   @OneToMany(() => Address, (address) => address.user)
   addresses: Address[];
+
+  @OneToMany(() => Cart, (cart) => cart.user)
+  carts: Cart[];
 }

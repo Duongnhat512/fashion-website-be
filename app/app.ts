@@ -15,7 +15,7 @@ import orderRouter from './routers/order.route';
 import { warehouseRouter } from './routers/warehouse.route';
 import stockEntryRouter from './routers/stock_entry.route';
 import paymentRouter from './routers/payment.route';
-
+import cartRouter from './routers/cart.route';
 // Security imports
 import {
   helmetConfig,
@@ -129,6 +129,7 @@ app.use(`${apiVersion}/orders`, orderRouter);
 app.use(`${apiVersion}/warehouses`, warehouseRouter);
 app.use(`${apiVersion}/stock-entries`, stockEntryRouter);
 app.use(`${apiVersion}/payments`, paymentRouter);
+app.use(`${apiVersion}/carts`, cartRouter);
 
 // 404 handler
 app.use('*', (req, res) => {

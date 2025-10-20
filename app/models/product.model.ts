@@ -12,6 +12,7 @@ import {
 } from 'typeorm';
 import { Variant } from './variant.model';
 import { OrderItem } from './order_item.model';
+import CartItem from './cart_item.model';
 
 @Entity({ name: 'products' })
 export class Product {
@@ -61,4 +62,7 @@ export class Product {
 
   @OneToMany(() => OrderItem, (orderItem) => orderItem.product)
   orderItems?: OrderItem[];
+
+  @OneToMany(() => CartItem, (cartItem) => cartItem.product, { cascade: true })
+  cartItems?: CartItem[];
 }

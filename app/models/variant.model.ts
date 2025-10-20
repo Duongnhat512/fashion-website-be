@@ -11,6 +11,7 @@ import {
 import { Color } from './color.model';
 import { Product } from './product.model';
 import { OrderItem } from './order_item.model';
+import CartItem from './cart_item.model';
 
 @Entity({ name: 'variants' })
 export class Variant {
@@ -57,4 +58,7 @@ export class Variant {
 
   @OneToMany(() => OrderItem, (orderItem) => orderItem.variant)
   orderItems!: OrderItem[];
+
+  @OneToMany(() => CartItem, (cartItem) => cartItem.variant)
+  cartItems?: CartItem[];
 }
