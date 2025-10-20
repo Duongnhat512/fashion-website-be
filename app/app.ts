@@ -14,6 +14,7 @@ import { initializeProductSearch } from './utils/initialize_search';
 import orderRouter from './routers/order.route';
 import { warehouseRouter } from './routers/warehouse.route';
 import stockEntryRouter from './routers/stock_entry.route';
+import paymentRouter from './routers/payment.route';
 
 // Security imports
 import {
@@ -127,6 +128,7 @@ app.use(`${apiVersion}/products`, productRouter);
 app.use(`${apiVersion}/orders`, orderRouter);
 app.use(`${apiVersion}/warehouses`, warehouseRouter);
 app.use(`${apiVersion}/stock-entries`, stockEntryRouter);
+app.use(`${apiVersion}/payments`, paymentRouter);
 
 // 404 handler
 app.use('*', (req, res) => {

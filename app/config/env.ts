@@ -77,4 +77,11 @@ export const config = {
     port: envVars.REDIS_PORT,
     password: envVars.REDIS_PASSWORD,
   },
+  vnpay: {
+    tmnCode: envVars.VNPAY_TMN_CODE,
+    secretKey: envVars.VNPAY_SECRET_KEY,
+    url: envVars.VNPAY_URL,
+    vnpayVersion: envVars.VNPAY_VERSION,
+    vnpayApi: envVars.VNPAY_API,
+  },
 };
