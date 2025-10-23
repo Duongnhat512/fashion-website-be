@@ -3,6 +3,7 @@ export interface IRedisSearchService {
   searchProducts(
     query: string,
     categoryId?: string,
+    slug?: string,
     sortBy?: string,
     sortDirection?: string,
     page?: number,

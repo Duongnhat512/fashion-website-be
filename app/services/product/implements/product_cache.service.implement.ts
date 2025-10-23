@@ -51,6 +51,8 @@ export class ProductCacheService implements IProductCacheService {
 
         'slug',
         'TEXT',
+        'NOSTEM',
+        'SORTABLE',
 
         'imageUrl',
         'TEXT',

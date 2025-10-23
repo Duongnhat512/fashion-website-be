@@ -77,6 +77,7 @@ export class ProductService implements IProductService {
   async searchProducts(
     search?: string,
     categoryId?: string,
+    slug?: string,
     sort: string = 'desc',
     sortBy: string = 'createdAt',
     page: number = 1,
@@ -86,6 +87,7 @@ export class ProductService implements IProductService {
       const searchResult = await this.redisSearchService.searchProducts(
         search || '',
         categoryId,
+        slug,
         sortBy,
         sort,
         page,

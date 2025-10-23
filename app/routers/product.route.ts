@@ -6,6 +6,8 @@ const router = Router();
 const productController = new ProductController();
 
 router.get('/', (req, res) => productController.getAllProducts(req, res));
+
+//Dùng phương thức này để lấy danh sách product
 router.get('/search', (req, res) => productController.searchProducts(req, res));
 router.post('/', adminOnly, (req, res) =>
   productController.createProduct(req, res),

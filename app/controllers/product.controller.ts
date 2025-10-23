@@ -40,6 +40,7 @@ export class ProductController {
     const {
       search,
       categoryId,
+      slug,
       sort = 'desc',
       sortBy = 'createdAt',
       page = 1,
@@ -49,6 +50,7 @@ export class ProductController {
     const products = await this.productService.searchProducts(
       search as string,
       categoryId as string,
+      slug as string,
       sort as string,
       sortBy as string,
       Number(page),

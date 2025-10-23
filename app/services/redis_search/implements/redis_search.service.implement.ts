@@ -37,7 +37,8 @@ export class RedisSearchService implements IRedisSearchService {
 
   async searchProducts(
     query: string,
-    categoryId?: string,
+    categoryId?: string | undefined,
+    slug?: string | undefined,
     sortBy: string = 'createdAt',
     sortDirection: string = 'desc',
     page: number = 1,
@@ -47,6 +48,64 @@ export class RedisSearchService implements IRedisSearchService {
     total: number;
   }> {
     try {
+      if (slug) {
+        const slugForSearch = slug.replace(/-/g, ' ');
+
+        const result = (await redis.call(
+          'FT.SEARCH',
+          this.indexName,
+          `@slug:"${slugForSearch}" @status:{active}`,
+          'SORTBY',
+          sortBy === 'price' ? 'minPrice' : sortBy,
+          sortDirection.toUpperCase(),
+          'LIMIT',
+          (page - 1) * limit,
+          limit,
+        )) as any[];
+
+        const total = result[0] as number;
+        const products = [];
+
+        for (let i = 1; i < result.length; i += 2) {
+          const productKey = result[i] as string;
+          const productData = result[i + 1] as any[];
+
+          if (!productKey || !productData) {
+            continue;
+          }
+
+          const product: any = {};
+
+          for (let j = 0; j < productData.length; j += 2) {
+            const key = productData[j];
+            const value = productData[j + 1];
+
+            if (key === 'createdAt' || key === 'updatedAt') {
+              product[key] = new Date(parseInt(value));
+            } else if (key === 'ratingAverage') {
+              product[key] = parseFloat(value);
+            } else if (key === 'ratingCount') {
+              product[key] = parseInt(value);
+            } else if (key === 'variants') {
+              try {
+                product[key] = JSON.parse(value);
+              } catch (error) {
+                product[key] = [];
+              }
+            } else {
+              product[key] = value;
+            }
+          }
+
+          products.push(product);
+        }
+
+        return {
+          products,
+          total,
+        };
+      }
+
       let searchQuery = this.buildSearchQuery(query);
 
       if (searchQuery === '*') {

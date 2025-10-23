@@ -50,7 +50,7 @@ class CartController {
     try {
       const cart = await this.cartService.findCartByUserId(decode.userId);
       if (!cart) {
-        throw new Error('Cart not found');
+        throw new Error('Giỏ hàng không tồn tại');
       }
       addCartItemDto.cartId = cart.id;
       const cartItem = await this.cartService.addCartItem(addCartItemDto);
@@ -84,7 +84,7 @@ class CartController {
     try {
       const cart = await this.cartService.findCartByUserId(decode.userId);
       if (!cart) {
-        throw new Error('Cart not found');
+        throw new Error('Giỏ hàng không tồn tại');
       }
       removeCartItemDto.cartId = cart.id;
       const removedCartItem = await this.cartService.removeCartItem(

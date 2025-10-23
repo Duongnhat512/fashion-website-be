@@ -18,10 +18,11 @@ export interface IProductService {
   ): Promise<PaginatedProductsResponseDto>;
   searchProducts(
     search: string,
-    categoryId: string,
-    sort: string,
-    sortBy: string,
-    page: number,
-    limit: number,
+    categoryId?: string,
+    slug?: string,
+    sort?: string,
+    sortBy?: string,
+    page?: number,
+    limit?: number,
   ): Promise<PaginatedProductsResponseDto>;
 }
