@@ -72,4 +72,22 @@ export class OrderRepository {
     });
     return orders as unknown as OrderResponseDto[];
   }
+
+  async getOrdersByUserId(userId: string): Promise<OrderResponseDto[]> {
+    const orders = await this.orderRepository.find({
+      where: { user: { id: userId } },
+      relations: {
+        user: true,
+        items: {
+          product: true,
+          variant: {
+            color: true,
+          },
+        },
+        shippingAddress: true,
+      },
+      order: { createdAt: 'DESC' },
+    });
+    return orders as unknown as OrderResponseDto[];
+  }
 }

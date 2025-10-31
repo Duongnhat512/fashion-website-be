@@ -201,4 +201,13 @@ export class OrderController {
       res.status(500).json(ApiResponse.error((error as Error).message));
     }
   };
+
+  getOrdersByUserId = async (req: Request, res: Response) => {
+    try {
+      const orders = await this.orderService.getOrdersByUserId(req.params.userId);
+      res.status(200).json(ApiResponse.success('Danh sách đơn hàng', orders));
+    } catch (error) {
+      res.status(500).json(ApiResponse.error('Internal server error'));
+    }
+  };
 }
