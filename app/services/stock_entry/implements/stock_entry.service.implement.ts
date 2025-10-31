@@ -153,6 +153,19 @@ export class StockEntryServiceImplement implements IStockEntryService {
     updatedStockEntry: Partial<UpdateStockEntryRequestDto>,
   ): Promise<StockEntryResponse> {
     return this.dataSource.transaction(async (manager) => {
+      if (!updatedStockEntry.warehouseId) {
+        throw new Error('Vui lòng chọn kho.');
+      }
+
+      const inventory =
+        await this.inventoryRepository.getInventoryByVariantIdAndWarehouseId(
+          updatedStockEntry.stockEntryItems![0].variantId as string,
+          updatedStockEntry.warehouseId as string,
+        );
+      if (!inventory) {
+        throw new Error('Không tìm thấy inventory');
+      }
+
       const existingStockEntry = await this.stockEntryRepository.findById(id);
       if (!existingStockEntry) {
         throw new Error('Không tìm thấy phiếu nhập kho');
@@ -183,7 +196,7 @@ export class StockEntryServiceImplement implements IStockEntryService {
         const newItems = stockEntryItems.map((item) => {
           const stockEntryItem = new StockEntryItem();
           stockEntryItem.stockEntry = { id } as StockEntry;
-          stockEntryItem.inventory = { id: item.inventory!.id } as any;
+          stockEntryItem.inventory = { id: inventory!.id } as any;
           stockEntryItem.quantity = item.quantity;
           stockEntryItem.rate = item.rate;
           stockEntryItem.note = item.note;
