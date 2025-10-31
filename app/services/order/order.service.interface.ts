@@ -16,4 +16,5 @@ export interface IOrderService {
     orderId: string,
     status: OrderStatus,
   ): Promise<OrderResponseDto>;
+  getOrdersByUserId(userId: string): Promise<OrderResponseDto[]>;
 }

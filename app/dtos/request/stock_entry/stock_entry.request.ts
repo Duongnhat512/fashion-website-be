@@ -71,6 +71,10 @@ export class UpdateStockEntryRequestDto {
   @IsNumber()
   @IsOptional()
   totalCost?: number;
+
+  @IsString()
+  @IsOptional()
+  warehouseId?: string;
 }
 
 export class FilterStockEntryRequestDto {

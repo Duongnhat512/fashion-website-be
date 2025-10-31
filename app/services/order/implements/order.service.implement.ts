@@ -157,4 +157,8 @@ export class OrderService implements IOrderService {
     await this.orderRepository.updateOrder(order);
     return order;
   }
+  
+  async getOrdersByUserId(userId: string): Promise<OrderResponseDto[]> {
+    return this.orderRepository.getOrdersByUserId(userId);
+  }
 }

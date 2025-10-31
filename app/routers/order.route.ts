@@ -33,5 +33,10 @@ router.post(
   checkOrderOwnership as RequestHandler,
   orderController.confirmOrderAsCompleted,
 );
+router.get(
+  '/user/:userId',
+  authenticatedUser,
+  orderController.getOrdersByUserId,
+);
 
 export default router;
