@@ -15,13 +15,19 @@ import { IUserService } from '../user.service.interface';
 import bcrypt from 'bcrypt';
 import { AuthService } from '../../auth/implements/auth.service.implement';
 import { IAuthService } from '../../auth/auth.service.interface';
+import { ICartService } from '../../cart/cart.service.interface';
+import CreateCartRequestDto from '../../../dtos/request/cart/cart.request';
+import CartService from '../../cart/implement/cart.service.implement';
 
 export class UserService implements IUserService {
   private readonly userRepository: UserRepository;
   private readonly authService: IAuthService;
+  private readonly cartService: ICartService;
+
   constructor() {
     this.userRepository = new UserRepository();
     this.authService = new AuthService();
+    this.cartService = new CartService();
   }
   getAllUsers(): Promise<User[]> {
     return this.userRepository.getAllUsers();
@@ -101,6 +107,10 @@ export class UserService implements IUserService {
     await this.userRepository.updateRefreshToken(savedUser.id, refreshToken);
 
     delete (savedUser as any).password;
+
+    await this.cartService.createCart({
+      user: savedUser,
+    } as CreateCartRequestDto);
 
     return savedUser;
   }

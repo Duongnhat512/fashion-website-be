@@ -3,7 +3,6 @@ import { UserService } from '../services/user/implements/user.service.implement'
 import { IUserService } from '../services/user/user.service.interface';
 import {
   CreateUserRequestDto,
-  LoginRequestDto,
   UpdateUserRequestDto,
 } from '../dtos/request/user/user.request.dto';
 import { validate } from 'class-validator';

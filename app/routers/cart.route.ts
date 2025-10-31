@@ -8,6 +8,7 @@ const cartController = new CartController();
 // router.post('/:userId', authenticatedUser, (req, res) =>
 //   cartController.createCart(req, res),
 // );
+
 router.post('/item', authenticatedUser, (req, res) =>
   cartController.addCartItem(req, res),
 );

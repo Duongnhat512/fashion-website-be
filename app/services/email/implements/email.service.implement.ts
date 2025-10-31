@@ -39,7 +39,7 @@ export class EmailService implements IEmailService {
     try {
       const templatePath = path.join(
         __dirname,
-        '../..',
+        '../../..',
         'html',
         `${templatename}.html`,
       );
