@@ -16,9 +16,15 @@ export class InventoryRequestDto {
 }
 
 export class StockImportItemRequestDto {
+  @IsString()
+  @IsUUID()
+  @IsNotEmpty()
+  variantId!: string;
+
   @Type(() => InventoryRequestDto)
   @ValidateNested()
-  inventory!: InventoryRequestDto;
+  @IsOptional()
+  inventory?: InventoryRequestDto;
 
   @IsNumber()
   @IsNotEmpty()

@@ -13,7 +13,10 @@ import { StockEntryStatus } from '../../../models/enum/stock_entry_status.enum';
 import { Inventory } from '../../../models/inventory.model';
 import InventoryRepository from '../../../repositories/inventory.repository';
 import { StockEntryItem } from '../../../models/stock_entry_item.model';
-import { StockImportItemRequestDto } from '../../../dtos/request/stock_entry/stock_entry_item.request';
+import {
+  InventoryRequestDto,
+  StockImportItemRequestDto,
+} from '../../../dtos/request/stock_entry/stock_entry_item.request';
 
 export class StockEntryServiceImplement implements IStockEntryService {
   private readonly stockEntryRepository: StockEntryRepository;
@@ -96,11 +99,26 @@ export class StockEntryServiceImplement implements IStockEntryService {
     importData: ImportStockEntryRequestDto,
   ): Promise<StockEntryResponse> {
     return await this.dataSource.transaction(async (manager) => {
+      if (!importData.warehouseId) {
+        throw new Error('Vui lòng chọn kho.');
+      }
+
+      const inventory =
+        await this.inventoryRepository.getInventoryByVariantIdAndWarehouseId(
+          importData.stockEntryItems[0].variantId as string,
+          importData.warehouseId as string,
+        );
+
+      if (!inventory) {
+        throw new Error('Không tìm thấy inventory');
+      }
+
       importData.stockEntryItems = importData.stockEntryItems.map(
         (item: StockImportItemRequestDto) => {
           return {
             ...item,
             amount: item.quantity * item.rate,
+            inventory: { id: inventory?.id as string } as InventoryRequestDto,
           };
         },
       );
@@ -165,7 +183,7 @@ export class StockEntryServiceImplement implements IStockEntryService {
         const newItems = stockEntryItems.map((item) => {
           const stockEntryItem = new StockEntryItem();
           stockEntryItem.stockEntry = { id } as StockEntry;
-          stockEntryItem.inventory = { id: item.inventory.id } as any;
+          stockEntryItem.inventory = { id: item.inventory!.id } as any;
           stockEntryItem.quantity = item.quantity;
           stockEntryItem.rate = item.rate;
           stockEntryItem.note = item.note;

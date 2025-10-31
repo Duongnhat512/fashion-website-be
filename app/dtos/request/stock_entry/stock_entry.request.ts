@@ -38,6 +38,11 @@ export class ImportStockEntryRequestDto {
   @IsOptional()
   @IsNumber()
   totalCost?: number;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  warehouseId?: string;
 }
 
 export class UpdateStockEntryRequestDto {
