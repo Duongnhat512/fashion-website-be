@@ -127,7 +127,7 @@ export class PaymentController {
       if (result.success) {
         // Redirect to success page with order info
         const successUrl = `${
-          process.env.FRONTEND_URL || 'http://localhost:3000'
+          process.env.FRONTEND_URL || 'http://localhost:5173'
         }/payment/success?orderId=${result.response.vnp_TxnRef}&amount=${
           result.response.vnp_Amount
         }`;
