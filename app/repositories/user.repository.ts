@@ -52,9 +52,14 @@ export default class UserRepository {
     return this.repo.find();
   }
 
-  updateUser(updateUserDto: UpdateUserRequestDto) {
-    return this.repo.save(updateUserDto);
-  }
+  async updateUser(updateUserDto: UpdateUserRequestDto) {
+  const user = await this.repo.findOneBy({ id: updateUserDto.id });
+  if (!user) return null;
+
+  Object.assign(user, updateUserDto);
+  return this.repo.save(user);
+}
+
 
   deleteUser(id: string) {
     return this.repo.delete(id);

@@ -42,20 +42,25 @@ export class UserService implements IUserService {
   getAllUsers(): Promise<User[]> {
     return this.userRepository.getAllUsers();
   }
-  async updateUser(
-    updateUserDto: UpdateUserRequestDto,
-  ): Promise<UpdateUserResponseDto> {
-    const user = await this.userRepository.updateUser(updateUserDto);
-    if (!user) {
-      throw new Error('User not found');
-    }
-    return {
-      id: user.id,
-      fullname: user.fullname,
-      email: user.email,
-      role: user.role,
-    };
+ async updateUser(updateUserDto: UpdateUserRequestDto): Promise<UpdateUserResponseDto> {
+  const savedUser = await this.userRepository.updateUser(updateUserDto);
+
+  if (!savedUser) {
+    throw new Error('User not found');
   }
+
+  return {
+    id: savedUser.id,
+    fullname: savedUser.fullname,
+    email: savedUser.email,
+    role: savedUser.role,
+    dob: savedUser.dob,
+    gender: savedUser.gender,
+    phone: savedUser.phone,
+    avt: savedUser.avt,
+  };
+}
+
   async deleteUser(id: string): Promise<void> {
     const user = await this.userRepository.findById(id);
     if (!user) {
@@ -74,6 +79,11 @@ export class UserService implements IUserService {
       fullname: user.fullname,
       email: user.email,
       role: user.role,
+      dob: user.dob,
+      gender: user.gender,
+      phone: user.phone,
+      avt: user.avt,
+      
     };
   }
 
