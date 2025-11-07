@@ -19,7 +19,12 @@ export class UserController {
     this.userService = new UserService();
     this.cloudinaryService = new CloudinaryService();
   }
-
+  getAllUsers = async (req: Request, res: Response): Promise<void> => {
+    const result = await this.userService.getAllUsers();
+    res
+      .status(200)
+      .json(ApiResponse.success('Lấy danh sách người dùng thành công', result));
+  };
   createUser = async (req: Request, res: Response): Promise<void> => {
     try {
       const createUserDto = new CreateUserRequestDto();

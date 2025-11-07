@@ -26,5 +26,6 @@ router.post('/verify-reset-otp', (req, res) =>
 router.put('/update-avt', authenticatedUser, uploadSingle, (req, res) =>
   userController.updateAvt(req, res),
 );
+router.get('/', (req, res) => userController.getAllUsers(req, res));
 
 export default router;
