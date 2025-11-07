@@ -73,4 +73,27 @@ export class WarehouseController {
       res.status(500).json(ApiResponse.error('Cập nhật kho thất bại'));
     }
   }
+
+  async getAll(req: Request, res: Response) {
+    try {
+      const warehouses = await this.warehouseService.getAll();
+      res
+        .status(200)
+        .json(ApiResponse.success('Lấy danh sách kho thành công', warehouses));
+    } catch (error) {
+      res.status(500).json(ApiResponse.error('Lấy danh sách kho thất bại'));
+    }
+  }
+
+  async getById(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const warehouse = await this.warehouseService.getById(id);
+      res
+        .status(200)
+        .json(ApiResponse.success('Lấy thông tin kho thành công', warehouse));
+    } catch (error) {
+      res.status(500).json(ApiResponse.error('Lấy thông tin kho thất bại'));
+    }
+  }
 }

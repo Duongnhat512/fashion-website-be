@@ -7,4 +7,6 @@ import { Warehouse } from '../../models/warehouse.model';
 export interface IWarehouseService {
   create(warehouse: CreateWarehouseRequest): Promise<Warehouse>;
   update(warehouse: UpdateWarehouseRequest): Promise<Warehouse>;
+  getAll(): Promise<Warehouse[]>;
+  getById(id: string): Promise<Warehouse>;
 }

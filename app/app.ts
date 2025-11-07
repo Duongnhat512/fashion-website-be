@@ -28,6 +28,7 @@ import {
 } from './middlewares/security.middleware';
 import { securityConfig } from './config/security.config';
 import logger from './utils/logger';
+import inventoryRouter from './routers/inventory.route';
 
 const app: Application = express();
 
@@ -130,6 +131,7 @@ app.use(`${apiVersion}/warehouses`, warehouseRouter);
 app.use(`${apiVersion}/stock-entries`, stockEntryRouter);
 app.use(`${apiVersion}/payments`, paymentRouter);
 app.use(`${apiVersion}/carts`, cartRouter);
+app.use(`${apiVersion}/inventories`, inventoryRouter);
 
 // 404 handler
 app.use('*', (req, res) => {

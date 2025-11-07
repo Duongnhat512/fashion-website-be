@@ -13,3 +13,11 @@ warehouseRouter.post('/', adminOnly, (req, res) => {
 warehouseRouter.put('/', adminOnly, (req, res) => {
   warehouseController.update(req, res);
 });
+
+warehouseRouter.get('/', adminOnly, (req, res) => {
+  warehouseController.getAll(req, res);
+});
+
+warehouseRouter.get('/:id', adminOnly, (req, res) => {
+  warehouseController.getById(req, res);
+});

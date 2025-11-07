@@ -48,4 +48,17 @@ export default class InventoryRepository {
   ): Promise<Inventory> {
     return this.inventoryRepository.create(inventory);
   }
+
+  async getInventoryByWarehouseId(warehouseId: string): Promise<Inventory[]> {
+    return this.inventoryRepository.find({
+      where: { warehouse: { id: warehouseId } },
+      relations: ['warehouse', 'variant'],
+    });
+  }
+
+  async getAll(): Promise<Inventory[]> {
+    return this.inventoryRepository.find({
+      relations: ['warehouse', 'variant'],
+    });
+  }
 }

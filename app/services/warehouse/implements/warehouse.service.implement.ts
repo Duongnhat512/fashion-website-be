@@ -17,6 +17,12 @@ export class WarehouseService implements IWarehouseService {
     this.warehouseRepository = new WarehouseRepository();
     this.dataSource = AppDataSource;
   }
+  getAll(): Promise<Warehouse[]> {
+    return this.warehouseRepository.findAll();  
+  }
+  getById(id: string): Promise<Warehouse> {
+    return this.warehouseRepository.findById(id);
+  }
 
   async create(warehouseData: CreateWarehouseRequest): Promise<Warehouse> {
     return await this.dataSource.transaction(async (manager) => {

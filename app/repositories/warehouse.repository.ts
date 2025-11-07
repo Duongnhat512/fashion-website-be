@@ -20,4 +20,16 @@ export class WarehouseRepository {
   async update(warehouse: UpdateWarehouseRequest): Promise<Warehouse> {
     return this.warehouseRepository.save(warehouse);
   }
+
+  async findAll(): Promise<Warehouse[]> {
+    return this.warehouseRepository.find();
+  }
+
+  async findById(id: string): Promise<Warehouse> {
+    const warehouse = await this.warehouseRepository.findOne({ where: { id } });
+    if (!warehouse) {
+      throw new Error('Warehouse not found');
+    }
+    return warehouse;
+  }
 }
