@@ -59,4 +59,8 @@ export default class UserRepository {
   deleteUser(id: string) {
     return this.repo.delete(id);
   }
+
+  updatePassword(id: string, password: string) {
+    return this.repo.update(id, { password });
+  }
 }

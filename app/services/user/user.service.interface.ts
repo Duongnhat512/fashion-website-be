@@ -16,4 +16,7 @@ export interface IUserService {
     updateUserDto: UpdateUserRequestDto,
   ): Promise<UpdateUserResponseDto>;
   deleteUser(id: string): Promise<void>;
+  forgotPassword(email: string): Promise<void>;
+  resetPassword(token: string, password: string): Promise<void>;
+  verifyResetOtpAndGetToken(email: string, otp: number): Promise<string>;
 }

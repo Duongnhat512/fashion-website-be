@@ -81,4 +81,111 @@ export class UserController {
         );
     }
   };
+
+  forgotPassword = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        res.status(400).json(ApiResponse.error('Email là bắt buộc'));
+        return;
+      }
+
+      await this.userService.forgotPassword(email);
+
+      res
+        .status(200)
+        .json(
+          ApiResponse.success(
+            'Mã OTP đã được gửi đến email của bạn. Vui lòng kiểm tra email.',
+          ),
+        );
+    } catch (error) {
+      res
+        .status(500)
+        .json(
+          ApiResponse.error(
+            error instanceof Error ? error.message : 'Lỗi khi gửi OTP',
+          ),
+        );
+    }
+  };
+
+  verifyResetOtp = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { email, otp } = req.body;
+
+      if (!email || !otp) {
+        res.status(400).json(ApiResponse.error('Email và OTP là bắt buộc'));
+        return;
+      }
+
+      const resetToken = await this.userService.verifyResetOtpAndGetToken(
+        email,
+        parseInt(otp),
+      );
+
+      res.status(200).json(
+        ApiResponse.success('OTP đã được xác thực', {
+          resetToken,
+        }),
+      );
+    } catch (error) {
+      res
+        .status(400)
+        .json(
+          ApiResponse.error(
+            error instanceof Error ? error.message : 'OTP không hợp lệ',
+          ),
+        );
+    }
+  };
+
+  resetPassword = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { token, password, confirmPassword } = req.body;
+
+      if (!token) {
+        res
+          .status(400)
+          .json(
+            ApiResponse.error('Xác thực đặt lại mật khẩu không thành công'),
+          );
+        return;
+      }
+
+      if (!password) {
+        res.status(400).json(ApiResponse.error('Vui lòng nhập mật khẩu mới.'));
+        return;
+      }
+
+      if (password.length < 6) {
+        res
+          .status(400)
+          .json(ApiResponse.error('Mật khẩu phải có ít nhất 6 ký tự'));
+        return;
+      }
+      
+      if (password !== confirmPassword) {
+        res
+          .status(400)
+          .json(ApiResponse.error('Không trùng khớp mật khẩu.'));
+        return;
+      }
+
+      await this.userService.resetPassword(token, password);
+
+      res.status(200).json(ApiResponse.success('Đặt lại mật khẩu thành công'));
+    } catch (error) {
+      res
+        .status(400)
+        .json(
+          ApiResponse.error(
+            error instanceof Error
+              ? error.message
+              : 'Không thể đặt lại mật khẩu',
+          ),
+        );
+    }
+  };
 }

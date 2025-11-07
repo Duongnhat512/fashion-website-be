@@ -18,16 +18,26 @@ import { IAuthService } from '../../auth/auth.service.interface';
 import { ICartService } from '../../cart/cart.service.interface';
 import CreateCartRequestDto from '../../../dtos/request/cart/cart.request';
 import CartService from '../../cart/implement/cart.service.implement';
+import IOtpService from '../../otp/otp.service.interface';
+import { IEmailService } from '../../email/email.service.interface';
+import { EmailService } from '../../email/implements/email.service.implement';
+import { OtpService } from '../../otp/implements/opt.service.implement';
+import jwt from 'jsonwebtoken';
+import redis from '../../../config/redis.config';
 
 export class UserService implements IUserService {
   private readonly userRepository: UserRepository;
   private readonly authService: IAuthService;
   private readonly cartService: ICartService;
+  private readonly emailService: IEmailService;
+  private readonly otpService: IOtpService;
 
   constructor() {
     this.userRepository = new UserRepository();
     this.authService = new AuthService();
     this.cartService = new CartService();
+    this.emailService = new EmailService();
+    this.otpService = new OtpService();
   }
   getAllUsers(): Promise<User[]> {
     return this.userRepository.getAllUsers();
@@ -113,5 +123,105 @@ export class UserService implements IUserService {
     } as CreateCartRequestDto);
 
     return savedUser;
+  }
+  async forgotPassword(email: string): Promise<void> {
+    const user = await this.userRepository.findByEmail(email);
+    if (!user) {
+      throw new Error('User không tồn tại');
+    }
+
+    const otp = this.otpService.generateOtp();
+    const resetOtpKey = `reset_otp:${email}`;
+
+    await redis.set(resetOtpKey, otp.toString(), 'EX', 300);
+
+    try {
+      const htmlTemplate = await this.emailService.readHtmlTemplate(
+        'email_template',
+        {
+          otp,
+          username: email.split('@')[0],
+        },
+      );
+
+      await this.emailService.handleSendEmail(
+        email,
+        'Mã OTP đặt lại mật khẩu - BooBoo',
+        htmlTemplate,
+      );
+    } catch (error) {
+      await redis.del(resetOtpKey);
+      throw new Error('Không thể gửi email OTP');
+    }
+  }
+
+  async resetPassword(token: string, password: string): Promise<void> {
+    let decoded: { email: string; type: string };
+    try {
+      decoded = jwt.verify(token, config.secretToken!) as any;
+
+      if (decoded.type !== 'password_reset') {
+        throw new Error('Token không hợp lệ');
+      }
+    } catch (error) {
+      if (error instanceof jwt.TokenExpiredError) {
+        throw new Error(
+          'Token đã hết hạn. Vui lòng yêu cầu đặt lại mật khẩu lại.',
+        );
+      }
+      throw new Error('Token không hợp lệ');
+    }
+
+    const email = decoded.email;
+
+    const otpVerifiedKey = `reset_otp_verified:${email}`;
+    const isOtpVerified = await redis.get(otpVerifiedKey);
+
+    if (!isOtpVerified) {
+      throw new Error('OTP chưa được xác thực. Vui lòng xác thực OTP trước.');
+    }
+
+    const user = await this.userRepository.findByEmailWithPassword(email);
+    if (!user) {
+      throw new Error('Người dùng không tồn tại');
+    }
+
+    const passwordHash = await bcrypt.hash(password, config.saltRounds);
+
+    await this.userRepository.updatePassword(user.id, passwordHash);
+
+    await redis.del(otpVerifiedKey);
+    await redis.del(`reset_otp:${email}`);
+  }
+
+  async verifyResetOtpAndGetToken(email: string, otp: number): Promise<string> {
+    const resetOtpKey = `reset_otp:${email}`;
+    const storedOtp = await redis.get(resetOtpKey);
+
+    if (!storedOtp || storedOtp !== otp.toString()) {
+      throw new Error('Mã OTP không hợp lệ hoặc đã hết hạn');
+    }
+
+    const user = await this.userRepository.findByEmail(email);
+    if (!user) {
+      throw new Error('Người dùng không tồn tại');
+    }
+
+    await redis.del(resetOtpKey);
+
+    const otpVerifiedKey = `reset_otp_verified:${email}`;
+    await redis.set(otpVerifiedKey, 'true', 'EX', 600);
+
+    const resetToken = jwt.sign(
+      {
+        email: email,
+        type: 'password_reset',
+        iat: Math.floor(Date.now() / 1000),
+      },
+      config.secretToken!,
+      { expiresIn: '10m' },
+    );
+
+    return resetToken;
   }
 }
