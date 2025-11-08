@@ -13,7 +13,6 @@ export interface CreatePaymentUrlResponse {
 
 export interface PaymentReturnRequest {
   vnp_Amount: string;
-  vnp_BankCode: string;
   vnp_BankTranNo: string;
   vnp_CardType: string;
   vnp_OrderInfo: string;

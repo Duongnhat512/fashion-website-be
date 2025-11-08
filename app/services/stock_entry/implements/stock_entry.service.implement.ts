@@ -103,25 +103,31 @@ export class StockEntryServiceImplement implements IStockEntryService {
         throw new Error('Vui lòng chọn kho.');
       }
 
-      const inventory =
-        await this.inventoryRepository.getInventoryByVariantIdAndWarehouseId(
-          importData.stockEntryItems[0].variantId as string,
-          importData.warehouseId as string,
-        );
+      const itemsWithInventory = await Promise.all(
+        importData.stockEntryItems.map(
+          async (item: StockImportItemRequestDto) => {
+            const inventory =
+              await this.inventoryRepository.getInventoryByVariantIdAndWarehouseId(
+                item.variantId as string,
+                importData.warehouseId as string,
+              );
 
-      if (!inventory) {
-        throw new Error('Không tìm thấy inventory');
-      }
+            if (!inventory) {
+              throw new Error(
+                `Không tìm thấy inventory cho variant ${item.variantId} trong kho ${importData.warehouseId}`,
+              );
+            }
 
-      importData.stockEntryItems = importData.stockEntryItems.map(
-        (item: StockImportItemRequestDto) => {
-          return {
-            ...item,
-            amount: item.quantity * item.rate,
-            inventory: { id: inventory?.id as string } as InventoryRequestDto,
-          };
-        },
+            return {
+              ...item,
+              amount: item.quantity * item.rate,
+              inventory: { id: inventory.id } as InventoryRequestDto,
+            };
+          },
+        ),
       );
+
+      importData.stockEntryItems = itemsWithInventory;
 
       const totalCost = importData.stockEntryItems.reduce(
         (total, item) => total + item.quantity * item.rate,
@@ -157,15 +163,6 @@ export class StockEntryServiceImplement implements IStockEntryService {
         throw new Error('Vui lòng chọn kho.');
       }
 
-      const inventory =
-        await this.inventoryRepository.getInventoryByVariantIdAndWarehouseId(
-          updatedStockEntry.stockEntryItems![0].variantId as string,
-          updatedStockEntry.warehouseId as string,
-        );
-      if (!inventory) {
-        throw new Error('Không tìm thấy inventory');
-      }
-
       const existingStockEntry = await this.stockEntryRepository.findById(id);
       if (!existingStockEntry) {
         throw new Error('Không tìm thấy phiếu nhập kho');
@@ -177,13 +174,35 @@ export class StockEntryServiceImplement implements IStockEntryService {
         );
       }
 
-      const { stockEntryItems, ...stockEntryData } = updatedStockEntry;
+      const { stockEntryItems, warehouseId, ...stockEntryData } =
+        updatedStockEntry;
 
       if (Object.keys(stockEntryData).length > 0) {
         await manager.update(StockEntry, id, stockEntryData);
       }
 
-      if (stockEntryItems) {
+      if (stockEntryItems && stockEntryItems.length > 0) {
+        const itemsWithInventory = await Promise.all(
+          stockEntryItems.map(async (item) => {
+            const inventory =
+              await this.inventoryRepository.getInventoryByVariantIdAndWarehouseId(
+                item.variantId as string,
+                updatedStockEntry.warehouseId as string,
+              );
+
+            if (!inventory) {
+              throw new Error(
+                `Không tìm thấy inventory cho variant ${item.variantId} trong kho ${updatedStockEntry.warehouseId}`,
+              );
+            }
+
+            return {
+              item,
+              inventoryId: inventory.id,
+            };
+          }),
+        );
+
         const totalCost = stockEntryItems.reduce(
           (total, item) => total + item.quantity * item.rate,
           0,
@@ -193,10 +212,10 @@ export class StockEntryServiceImplement implements IStockEntryService {
 
         await manager.delete(StockEntryItem, { stockEntry: { id } });
 
-        const newItems = stockEntryItems.map((item) => {
+        const newItems = itemsWithInventory.map(({ item, inventoryId }) => {
           const stockEntryItem = new StockEntryItem();
           stockEntryItem.stockEntry = { id } as StockEntry;
-          stockEntryItem.inventory = { id: inventory!.id } as any;
+          stockEntryItem.inventory = { id: inventoryId } as any;
           stockEntryItem.quantity = item.quantity;
           stockEntryItem.rate = item.rate;
           stockEntryItem.note = item.note;

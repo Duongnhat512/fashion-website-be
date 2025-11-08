@@ -75,7 +75,6 @@ export class VNPayService implements IPaymentService {
         vnp_ReturnUrl: this.returnUrl,
         vnp_OrderType: ProductCode.Pay,
         vnp_CurrCode: VnpCurrCode.VND,
-        vnp_BankCode: request.bankCode,
         vnp_Locale: VnpLocale.VN,
         vnp_CreateDate: dateFormat(new Date()),
         vnp_ExpireDate: dateFormat(new Date(Date.now() + 10 * 60 * 1000)),
