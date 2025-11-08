@@ -16,9 +16,11 @@ router.post('/', adminOnly, uploadProductWithVariants, (req, res) =>
 router.put('/', adminOnly, uploadProductWithVariants, (req, res) =>
   productController.updateProduct(req, res),
 );
+router.get('/:id', adminOnly, (req, res) => productController.getProductById(req, res));
 router.post('/delete/:id', adminOnly, (req, res) =>
   productController.deleteProduct(req, res),
 );
+
 
 
 export default router;

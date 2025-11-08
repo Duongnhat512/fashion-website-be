@@ -282,35 +282,182 @@ export class ProductController {
   }
 
   async updateProduct(req: Request, res: Response) {
-    const updateProductDto = new UpdateProductRequestDto();
-    Object.assign(updateProductDto, req.body);
+    const uploadedPublicIds: string[] = [];
 
-    updateProductDto.category = { id: req.body.category.id } as Category;
+    try {
+      const files = (req.files as Express.Multer.File[]) || [];
 
-    if (req.body.variants && req.body.variants.length > 0) {
-      updateProductDto.variants = req.body.variants.map((variant: any) => {
-        const variantDto = new UpdateVariantRequestDto();
-        Object.assign(variantDto, variant);
-        if (variant.color) {
-          variantDto.color = { id: variant.color.id } as Color;
+      // Parse productData - handle cả JSON string và object
+      let productData: any;
+      if (typeof req.body.productData === 'string') {
+        try {
+          productData = JSON.parse(req.body.productData);
+        } catch (e) {
+          return res.status(400).json(
+            ApiResponse.error('Invalid productData format', [
+              {
+                field: 'productData',
+                message: ['Product data format không hợp lệ'],
+              },
+            ]),
+          );
         }
-        return variantDto;
-      });
-    }
+      } else {
+        productData = req.body;
+      }
 
-    const errors = await validate(updateProductDto);
-    if (errors.length > 0) {
-      const validationErrors: ValidationErrorDto[] = errors.map((error) => ({
-        field: error.property,
-        message: Object.values(error.constraints || {}),
-      }));
-      return res
-        .status(400)
-        .json(ApiResponse.error('Lỗi xác thực', validationErrors));
-    }
+      // 1. Handle product image - ưu tiên URL có sẵn
+      let productImageUrl = productData.imageUrl || '';
+      const productImageFile = files.find(
+        (f) => f.fieldname === 'productImage',
+      );
 
-    const product = await this.productService.updateProduct(updateProductDto);
-    res.status(200).json(ApiResponse.success('Cập nhật sản phẩm', product));
+      if (productImageFile) {
+        const uploadResult = await this.cloudinaryService.uploadImage(
+          productImageFile,
+          'fashion-website/products',
+        );
+        productImageUrl = uploadResult.url;
+        uploadedPublicIds.push(uploadResult.publicId);
+      }
+
+      // 2. Handle variant images
+      const variants: any[] = [];
+
+      if (productData.variants) {
+        const variantsArray = Array.isArray(productData.variants)
+          ? productData.variants
+          : Object.values(productData.variants);
+
+        for (let i = 0; i < variantsArray.length; i++) {
+          const variantData = variantsArray[i];
+
+          // Tìm file theo pattern: variants[0][image], variants[1][image], ...
+          const variantImageFile = files.find(
+            (f) =>
+              f.fieldname === `variants[${i}][image]` ||
+              f.fieldname === `variants.${i}.image` ||
+              f.fieldname === `variants[${i}].image`,
+          );
+
+          // Ưu tiên URL có sẵn, nếu không thì upload file
+          let variantImageUrl = variantData.imageUrl || '';
+
+          if (variantImageFile) {
+            try {
+              const uploadResult = await this.cloudinaryService.uploadImage(
+                variantImageFile,
+                'fashion-website/variants',
+              );
+              variantImageUrl = uploadResult.url;
+              uploadedPublicIds.push(uploadResult.publicId);
+            } catch (uploadError) {
+              // Nếu upload variant image fail, rollback tất cả
+              if (uploadedPublicIds.length > 0) {
+                await this.cloudinaryService.deleteMultipleImages(
+                  uploadedPublicIds,
+                );
+              }
+              throw new Error(`Lỗi upload ảnh variant ${i}: ${uploadError}`);
+            }
+          }
+
+          variants.push({
+            ...variantData,
+            imageUrl: variantImageUrl,
+          });
+        }
+      }
+
+      // 3. Create UpdateProductDto
+      const updateProductDto = new UpdateProductRequestDto();
+      Object.assign(updateProductDto, productData);
+      
+      if (productImageUrl) {
+        updateProductDto.imageUrl = productImageUrl;
+      }
+
+      if (productData.category?.id) {
+        updateProductDto.category = { id: productData.category.id } as Category;
+      }
+
+      // 4. Map variants to DTOs
+      if (variants.length > 0) {
+        updateProductDto.variants = variants.map((variant: any) => {
+          const variantDto = new UpdateVariantRequestDto();
+          Object.assign(variantDto, variant);
+          
+          if (variant.color?.id) {
+            variantDto.color = { id: variant.color.id } as Color;
+          }
+
+          // Convert numbers - chỉ convert khi chưa phải number
+          if (variant.price !== undefined) {
+            variantDto.price =
+              typeof variant.price === 'number'
+                ? variant.price
+                : Number(variant.price);
+          }
+          if (variant.discountPrice !== undefined) {
+            variantDto.discountPrice =
+              typeof variant.discountPrice === 'number'
+                ? variant.discountPrice
+                : Number(variant.discountPrice);
+          }
+          if (variant.discountPercent !== undefined) {
+            variantDto.discountPercent =
+              typeof variant.discountPercent === 'number'
+                ? variant.discountPercent
+                : Number(variant.discountPercent);
+          }
+
+          return variantDto;
+        });
+      }
+
+      // 5. Validate DTO
+      const errors = await validate(updateProductDto);
+      if (errors.length > 0) {
+        // Rollback uploaded images
+        if (uploadedPublicIds.length > 0) {
+          await this.cloudinaryService.deleteMultipleImages(uploadedPublicIds);
+        }
+
+        const validationErrors: ValidationErrorDto[] = errors.map((error) => ({
+          field: error.property,
+          message: Object.values(error.constraints || {}),
+        }));
+
+        return res
+          .status(400)
+          .json(ApiResponse.validationError(validationErrors));
+      }
+
+      // 6. Update product
+      const product = await this.productService.updateProduct(updateProductDto);
+      return res.status(200).json(ApiResponse.success('Cập nhật sản phẩm', product));
+    } catch (error: any) {
+      // Rollback on error
+      if (uploadedPublicIds.length > 0) {
+        try {
+          await this.cloudinaryService.deleteMultipleImages(uploadedPublicIds);
+          console.info(
+            `Rolled back ${uploadedPublicIds.length} uploaded images due to error: ${error.message}`,
+          );
+        } catch (cleanupError) {
+          console.error('Failed to cleanup uploaded images:', cleanupError);
+        }
+      }
+
+      return res.status(500).json(
+        ApiResponse.error('Cập nhật sản phẩm', [
+          {
+            message: error.message || 'Cập nhật sản phẩm thất bại',
+            field: 'updateProduct',
+          },
+        ]),
+      );
+    }
   }
 
   async deleteProduct(req: Request, res: Response) {

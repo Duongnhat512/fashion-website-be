@@ -1,5 +1,5 @@
 import { Product } from '../models/product.model';
-import { Like, Repository } from 'typeorm';
+import { DataSource, Like, Repository } from 'typeorm';
 import { AppDataSource } from '../config/data_source';
 import {
   PaginatedProductsResponseDto,
@@ -9,19 +9,75 @@ import {
   ProductRequestDto,
   UpdateProductRequestDto,
 } from '../dtos/request/product/product.request';
+import { Warehouse } from '../models/warehouse.model';
+import { Inventory } from '../models/inventory.model';
 
 export class ProductRepository {
   private readonly productRepository: Repository<Product>;
+  private readonly dataSource: DataSource;
 
   constructor() {
     this.productRepository = AppDataSource.getRepository(Product);
+    this.dataSource = AppDataSource;
   }
 
   async createProduct(product: ProductRequestDto): Promise<ProductResponseDto> {
-    const newProduct = await this.productRepository.save({
-      ...product,
+    return await this.dataSource.transaction(async (manager) => {
+      // 1. Tạo product với variants
+      const newProduct = await manager.save(Product, {
+        ...product,
+      });
+
+      // 2. Lấy tất cả các warehouse
+      const warehouseRepo = manager.getRepository(Warehouse);
+      const allWarehouses = await warehouseRepo.find();
+
+      // 3. Nếu có variants và có warehouses, tạo inventory cho mỗi variant trong mỗi kho
+      if (newProduct.variants && newProduct.variants.length > 0 && allWarehouses.length > 0) {
+        const inventoryRepo = manager.getRepository(Inventory);
+        
+        // Tạo inventory cho tất cả các variant trong tất cả các kho
+        const inventoryPromises = [];
+        for (const variant of newProduct.variants) {
+          for (const warehouse of allWarehouses) {
+            const inventory = inventoryRepo.create({
+              warehouse: warehouse,
+              variant: variant,
+              onHand: 0,
+            });
+            inventoryPromises.push(inventoryRepo.save(inventory));
+          }
+        }
+
+        await Promise.all(inventoryPromises);
+        
+        console.log(`Created ${inventoryPromises.length} inventory records for ${newProduct.variants.length} variants across ${allWarehouses.length} warehouses`);
+      }
+
+      // 4. Lấy lại product với đầy đủ relations trong cùng transaction
+      const productRepo = manager.getRepository(Product);
+      const createdProduct = await productRepo.findOne({
+        where: { id: newProduct.id },
+        relations: {
+          variants: {
+            color: true,
+          },
+          category: true,
+        },
+      });
+
+      if (!createdProduct) {
+        throw new Error('Failed to retrieve created product');
+      }
+
+      return {
+        ...createdProduct,
+        categoryId: createdProduct.category?.id,
+        brand: createdProduct.brand ?? '',
+        createdAt: createdProduct.createdAt,
+        updatedAt: createdProduct.updatedAt,
+      };
     });
-    return this.getProductById(newProduct.id);
   }
 
   async updateProduct(

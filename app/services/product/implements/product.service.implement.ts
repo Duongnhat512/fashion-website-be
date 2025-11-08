@@ -24,7 +24,11 @@ export class ProductService implements IProductService {
   }
 
   async createProduct(product: ProductRequestDto): Promise<ProductResponseDto> {
+    console.log(`Creating product with ${product.variants?.length || 0} variants`);
+    
     const newProduct = await this.productRepository.createProduct(product);
+
+    console.log(`Product created successfully with ID: ${newProduct.id}`);
 
     try {
       const productEntity = await this.productRepository.getProductEntityById(
