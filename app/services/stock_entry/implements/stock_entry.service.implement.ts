@@ -36,6 +36,10 @@ export class StockEntryServiceImplement implements IStockEntryService {
     return stockEntries.map(this.mapToResponse);
   }
 
+  async getAll(): Promise<StockEntryResponse[]> {
+    const stockEntries = await this.stockEntryRepository.findAll();
+    return stockEntries.map(this.mapToResponse);
+  }
   async summit(id: string): Promise<StockEntryResponse> {
     return this.dataSource.transaction(async (manager) => {
       const stockEntry = await this.stockEntryRepository.findById(id);

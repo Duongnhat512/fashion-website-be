@@ -20,4 +20,5 @@ router.post('/delete/:id', adminOnly, (req, res) =>
   productController.deleteProduct(req, res),
 );
 
+
 export default router;

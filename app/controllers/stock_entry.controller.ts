@@ -16,6 +16,22 @@ export class StockEntryController {
   constructor() {
     this.stockEntryService = new StockEntryServiceImplement();
   }
+  getAllStockEntries = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const result = await this.stockEntryService.findAll();
+      res
+        .status(200)
+        .json(ApiResponse.success('Danh sách phiếu nhập kho', result));
+    } catch (error) {
+      res
+        .status(500)
+        .json(
+          ApiResponse.serverError(
+            error instanceof Error ? error.message : 'Internal server error',
+          ),
+        );
+    } 
+  };
 
   createStockEntry = async (req: Request, res: Response): Promise<void> => {
     try {
