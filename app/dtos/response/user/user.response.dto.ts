@@ -24,6 +24,7 @@ export class LoginUserResponseDto {
     fullname: string;
     email: string;
     role: string;
+    avt?: string;
   };
 }
 
