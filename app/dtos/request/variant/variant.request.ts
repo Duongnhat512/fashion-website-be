@@ -12,31 +12,31 @@ import { Color } from '../../../models/color.model';
 
 export class VariantRequestDto {
   @IsString()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'SKU không được để trống' })
   sku!: string;
 
   @IsObject()
+  @IsNotEmpty({ message: 'Màu sắc không được để trống' })
   color!: Color;
 
   @IsString()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Kích thước không được để trống' })
   size!: string;
 
   @IsNumber()
+  @IsNotEmpty({ message: 'Giá không được để trống' })
   price!: number;
 
   @IsNumber()
+  @IsNotEmpty({ message: 'Giá khuyến mãi không được để trống' })
   discountPrice!: number;
 
   @IsNumber()
   @IsOptional()
   discountPercent?: number;
 
-  @IsNumber()
-  stock!: number;
-
   @IsString()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Ảnh không được để trống' })
   imageUrl!: string;
 
   @IsBoolean()
@@ -79,10 +79,6 @@ export class UpdateVariantRequestDto {
   @IsNumber()
   @IsOptional()
   discountPercent?: number;
-
-  @IsNumber()
-  @IsOptional()
-  stock?: number;
 
   @IsString()
   @IsOptional()

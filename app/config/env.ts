@@ -36,6 +36,10 @@ const envSchema = Joi.object({
   SALT_ROUNDS: Joi.number().min(10).default(12),
   ALLOWED_ORIGINS: Joi.string().optional(),
   ADMIN_IP_WHITELIST: Joi.string().optional(),
+
+  CLOUDINARY_CLOUD_NAME: Joi.string().required(),
+  CLOUDINARY_API_KEY: Joi.string().required(),
+  CLOUDINARY_API_SECRET: Joi.string().required(),
 }).unknown();
 
 const { error, value: envVars } = envSchema.validate(process.env);
@@ -83,5 +87,10 @@ export const config = {
     url: envVars.VNPAY_URL,
     vnpayVersion: envVars.VNPAY_VERSION,
     vnpayApi: envVars.VNPAY_API,
+  },
+  cloudinary: {
+    cloudName: envVars.CLOUDINARY_CLOUD_NAME,
+    apiKey: envVars.CLOUDINARY_API_KEY,
+    apiSecret: envVars.CLOUDINARY_API_SECRET,
   },
 };

@@ -50,10 +50,10 @@ export class UserService implements IUserService {
       throw new Error('User not found');
     }
     return {
-      id: user.generatedMaps[0].id,
-      fullname: user.generatedMaps[0].fullname,
-      email: user.generatedMaps[0].email,
-      role: user.generatedMaps[0].role,
+      id: user.id,
+      fullname: user.fullname,
+      email: user.email,
+      role: user.role,
     };
   }
   async deleteUser(id: string): Promise<void> {

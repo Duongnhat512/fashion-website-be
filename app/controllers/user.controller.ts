@@ -8,12 +8,16 @@ import {
 import { validate } from 'class-validator';
 import { ValidationErrorDto } from '../dtos/response/response.dto';
 import { ApiResponse } from '../dtos/response/api.response.dto';
+import { ICloudService } from '../services/cloud/cloud.service.interface';
+import { CloudinaryService } from '../services/cloud/implement/cloudinary.service.implement';
 
 export class UserController {
   private readonly userService: IUserService;
+  private readonly cloudinaryService: ICloudService;
 
   constructor() {
     this.userService = new UserService();
+    this.cloudinaryService = new CloudinaryService();
   }
 
   createUser = async (req: Request, res: Response): Promise<void> => {
@@ -165,11 +169,9 @@ export class UserController {
           .json(ApiResponse.error('Mật khẩu phải có ít nhất 6 ký tự'));
         return;
       }
-      
+
       if (password !== confirmPassword) {
-        res
-          .status(400)
-          .json(ApiResponse.error('Không trùng khớp mật khẩu.'));
+        res.status(400).json(ApiResponse.error('Không trùng khớp mật khẩu.'));
         return;
       }
 
@@ -184,6 +186,45 @@ export class UserController {
             error instanceof Error
               ? error.message
               : 'Không thể đặt lại mật khẩu',
+          ),
+        );
+    }
+  };
+
+  updateAvt = async (req: Request, res: Response): Promise<void> => {
+    let publicId: string = '';
+
+    try {
+      const files = (req.files as Express.Multer.File[]) || [];
+      const userId = req.user!.userId;
+      const avt = files.find((file) => file.fieldname === 'avt');
+
+      if (!avt) {
+        res.status(400).json(ApiResponse.error('Ảnh đại diện là bắt buộc'));
+        return;
+      }
+
+      const uploadResult = await this.cloudinaryService.uploadImage(
+        avt,
+        'fashion-website/users',
+      );
+      const avtUrl = uploadResult.url;
+      publicId = uploadResult.publicId;
+
+      const result = await this.userService.updateUser({
+        id: userId,
+        avt: avtUrl,
+      });
+      res
+        .status(200)
+        .json(ApiResponse.success('Cập nhật ảnh đại diện thành công', result));
+    } catch (error) {
+      await this.cloudinaryService.deleteImage(publicId);
+      res
+        .status(500)
+        .json(
+          ApiResponse.serverError(
+            error instanceof Error ? error.message : 'Lỗi server',
           ),
         );
     }

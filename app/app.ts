@@ -29,6 +29,7 @@ import {
 import { securityConfig } from './config/security.config';
 import logger from './utils/logger';
 import inventoryRouter from './routers/inventory.route';
+import uploadRouter from './routers/upload.route';
 
 const app: Application = express();
 
@@ -90,6 +91,14 @@ app.use(
 // Request sanitization
 app.use(sanitizeRequest);
 
+app.use((req, res, next) => {
+  if (req.headers['content-type']?.includes('multipart/form-data')) {
+    return next(); // Skip body parser, để multer xử lý
+  }
+  next();
+});
+
+
 // Logging middleware
 app.use(
   morgan('combined', {
@@ -132,6 +141,7 @@ app.use(`${apiVersion}/stock-entries`, stockEntryRouter);
 app.use(`${apiVersion}/payments`, paymentRouter);
 app.use(`${apiVersion}/carts`, cartRouter);
 app.use(`${apiVersion}/inventories`, inventoryRouter);
+app.use(`${apiVersion}/uploads`, uploadRouter);
 
 // 404 handler
 app.use('*', (req, res) => {

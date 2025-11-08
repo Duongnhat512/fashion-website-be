@@ -7,24 +7,26 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Category } from '../../../models/category.model';
-import { Variant } from '../../../models/variant.model';
-import { UpdateVariantRequestDto } from '../variant/variant.request';
+import {
+  UpdateVariantRequestDto,
+  VariantRequestDto,
+} from '../variant/variant.request';
 
 export class ProductRequestDto {
   @IsString()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Tên sản phẩm không được để trống' })
   name!: string;
 
   @IsString()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Slug không được để trống' })
   slug!: string;
 
   @IsString()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Mô tả ngắn không được để trống' })
   shortDescription!: string;
 
   @IsString()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Ảnh sản phẩm không được để trống' })
   imageUrl!: string;
 
   @IsString()
@@ -32,6 +34,7 @@ export class ProductRequestDto {
   brand?: string;
 
   @IsObject()
+  @IsNotEmpty({ message: 'Danh mục không được để trống' })
   category!: Category;
 
   @IsString()
@@ -45,7 +48,7 @@ export class ProductRequestDto {
   @IsArray()
   @IsOptional()
   @ValidateNested({ each: true })
-  variants?: Variant[];
+  variants?: VariantRequestDto[];
 }
 
 export class UpdateProductRequestDto {

@@ -53,7 +53,7 @@ export default class UserRepository {
   }
 
   updateUser(updateUserDto: UpdateUserRequestDto) {
-    return this.repo.update(updateUserDto.id, updateUserDto);
+    return this.repo.save(updateUserDto);
   }
 
   deleteUser(id: string) {
