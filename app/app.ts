@@ -33,6 +33,7 @@ import uploadRouter from './routers/upload.route';
 import promotionRouter from './routers/promotion.route';
 import { initializePromotionScheduler } from './schedulers/promotion.scheduler';
 import colorRouter from './routers/color.route';
+import statisticsRouter from './routers/statistics.route';
 
 const app: Application = express();
 
@@ -147,6 +148,7 @@ app.use(`${apiVersion}/inventories`, inventoryRouter);
 app.use(`${apiVersion}/uploads`, uploadRouter);
 app.use(`${apiVersion}/promotions`, promotionRouter);
 app.use(`${apiVersion}/colors`, colorRouter);
+app.use(`${apiVersion}/statistics`, statisticsRouter);
 
 // 404 handler
 app.use('*', (req, res) => {
