@@ -32,6 +32,7 @@ import inventoryRouter from './routers/inventory.route';
 import uploadRouter from './routers/upload.route';
 import promotionRouter from './routers/promotion.route';
 import { initializePromotionScheduler } from './schedulers/promotion.scheduler';
+import colorRouter from './routers/color.route';
 
 const app: Application = express();
 
@@ -101,7 +102,6 @@ app.use((req, res, next) => {
   next();
 });
 
-
 // Logging middleware
 app.use(
   morgan('combined', {
@@ -146,6 +146,7 @@ app.use(`${apiVersion}/carts`, cartRouter);
 app.use(`${apiVersion}/inventories`, inventoryRouter);
 app.use(`${apiVersion}/uploads`, uploadRouter);
 app.use(`${apiVersion}/promotions`, promotionRouter);
+app.use(`${apiVersion}/colors`, colorRouter);
 
 // 404 handler
 app.use('*', (req, res) => {
