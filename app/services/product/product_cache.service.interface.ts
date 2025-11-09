@@ -16,4 +16,9 @@ export interface IProductCacheService {
   getCacheStats(): Promise<{ totalProducts: number; memoryUsage: string }>;
   resetIndex(): Promise<void>;
   reindexAllProducts(): Promise<void>;
+  updateProductRating(
+    productId: string,
+    ratingAverage: number,
+    ratingCount: number,
+  ): Promise<void>;
 }

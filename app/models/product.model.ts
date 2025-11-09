@@ -13,6 +13,7 @@ import {
 import { Variant } from './variant.model';
 import { OrderItem } from './order_item.model';
 import CartItem from './cart_item.model';
+import { Review } from './review.model';
 
 @Entity({ name: 'products' })
 export class Product {
@@ -65,4 +66,7 @@ export class Product {
 
   @OneToMany(() => CartItem, (cartItem) => cartItem.product, { cascade: true })
   cartItems?: CartItem[];
+
+  @OneToMany(() => Review, (review) => review.product)
+  reviews?: Review[];
 }

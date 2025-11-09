@@ -18,6 +18,7 @@ import Cart from '../models/cart.model';
 import CartItem from '../models/cart_item.model';
 import { Promotion } from '../models/promotion.model';
 import { PromotionProduct } from '../models/promotion_product.model';
+import { Review } from '../models/review.model';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -44,6 +45,7 @@ export const AppDataSource = new DataSource({
     CartItem,
     Promotion,
     PromotionProduct,
+    Review,
   ],
   synchronize: true,
   logging: false,

@@ -34,6 +34,7 @@ import promotionRouter from './routers/promotion.route';
 import { initializePromotionScheduler } from './schedulers/promotion.scheduler';
 import colorRouter from './routers/color.route';
 import statisticsRouter from './routers/statistics.route';
+import reviewRouter from './routers/review.route';
 
 const app: Application = express();
 
@@ -149,6 +150,7 @@ app.use(`${apiVersion}/uploads`, uploadRouter);
 app.use(`${apiVersion}/promotions`, promotionRouter);
 app.use(`${apiVersion}/colors`, colorRouter);
 app.use(`${apiVersion}/statistics`, statisticsRouter);
+app.use(`${apiVersion}/reviews`, reviewRouter);
 
 // 404 handler
 app.use('*', (req, res) => {

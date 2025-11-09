@@ -55,7 +55,7 @@ export class ProductRepository {
       },
     });
     if (!product) {
-      throw new Error('Product not found');
+      throw new Error('Không tìm thấy sản phẩm.');
     }
     return {
       ...product,
@@ -228,5 +228,17 @@ export class ProductRepository {
       category: undefined,
       brand: product.brand ?? '',
     }));
+  }
+
+  async updateProductRating(
+    id: string,
+    ratingAverage: number,
+    ratingCount: number,
+  ): Promise<void> {
+    await this.productRepository.update(id, {
+      ratingAverage,
+      ratingCount,
+      updatedAt: new Date(),
+    });
   }
 }

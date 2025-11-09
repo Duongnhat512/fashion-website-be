@@ -352,4 +352,23 @@ export class ProductCacheService implements IProductCacheService {
     } catch (error) {}
     await this.createIndex();
   }
+
+  async updateProductRating(
+    productId: string,
+    ratingAverage: number,
+    ratingCount: number,
+  ): Promise<void> {
+    try {
+      const key = `${this.PRODUCT_PREFIX}${productId}`;
+
+      await redis.hset(key, {
+        ratingAverage: ratingAverage.toString(),
+        ratingCount: ratingCount.toString(),
+        updatedAt: Date.now().toString(),
+      });
+    } catch (error) {
+      console.error('Error updating product rating in Redis:', error);
+      throw error;
+    }
+  }
 }
