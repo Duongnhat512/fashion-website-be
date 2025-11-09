@@ -6,7 +6,7 @@ import {
   CreatePromotionRequestDto,
   UpdatePromotionRequestDto,
 } from '../dtos/request/promotion/promotion.request';
-import { PromotionService } from '../services/promotion/implement/promotion.service.implement';
+import { PromotionService } from '../services/promotion/implements/promotion.service.implement';
 
 export class PromotionController {
   private readonly service = new PromotionService();

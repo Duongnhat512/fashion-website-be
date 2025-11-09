@@ -1,6 +1,6 @@
 import { AppDataSource } from '../config/data_source';
 import { Promotion } from '../models/promotion.model';
-import { PromotionService } from '../services/promotion/implement/promotion.service.implement';
+import { PromotionService } from '../services/promotion/implements/promotion.service.implement';
 
 export function initializePromotionScheduler(): void {
   // chạy mỗi 60s

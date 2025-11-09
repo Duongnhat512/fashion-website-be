@@ -15,7 +15,7 @@ import {
 import { Category } from '../models/category.model';
 import { Color } from '../models/color.model';
 import { ICloudService } from '../services/cloud/cloud.service.interface';
-import { CloudinaryService } from '../services/cloud/implement/cloudinary.service.implement';
+import { CloudinaryService } from '../services/cloud/implements/cloudinary.service.implement';
 
 export class ProductController {
   private readonly productService: IProductService;

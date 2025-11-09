@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { ApiResponse } from '../dtos/response/api.response.dto';
-import { InventoryService } from '../services/inventory/implement/inventory.service.implement';
+import { InventoryService } from '../services/inventory/implements/inventory.service.implement';
 import IInventoryService from '../services/inventory/inventory.service.interface';
 
 export class InventoryController {

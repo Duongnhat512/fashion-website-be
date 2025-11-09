@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { CloudinaryService } from '../services/cloud/implement/cloudinary.service.implement';
+import { CloudinaryService } from '../services/cloud/implements/cloudinary.service.implement';
 import { ApiResponse } from '../dtos/response/api.response.dto';
 import { ICloudService } from '../services/cloud/cloud.service.interface';
 
@@ -68,9 +68,9 @@ export class UploadController {
         folder || 'fashion-website/products',
       );
 
-      res.status(200).json(
-        ApiResponse.success('Upload hình ảnh thành công', results),
-      );
+      res
+        .status(200)
+        .json(ApiResponse.success('Upload hình ảnh thành công', results));
     } catch (error: any) {
       res.status(500).json(
         ApiResponse.error('Upload hình ảnh', [
@@ -100,9 +100,9 @@ export class UploadController {
 
       await this.cloudinaryService.deleteImage(publicId);
 
-      res.status(200).json(
-        ApiResponse.success('Xóa hình ảnh thành công', null),
-      );
+      res
+        .status(200)
+        .json(ApiResponse.success('Xóa hình ảnh thành công', null));
     } catch (error: any) {
       res.status(500).json(
         ApiResponse.error('Xóa hình ảnh', [

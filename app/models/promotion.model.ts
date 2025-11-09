@@ -12,6 +12,7 @@ import {
 import PromotionType from './enum/promotional_type.enum';
 import { PromotionProduct } from './promotion_product.model';
 import { Category } from './category.model';
+import PromotionStatus from './enum/promotion.enum';
 
 @Entity({ name: 'promotions' })
 export class Promotion {
@@ -46,6 +47,14 @@ export class Promotion {
 
   @Column({ type: 'varchar', length: 255, name: 'note', nullable: true })
   note?: string;
+
+  @Column({
+    type: 'enum',
+    enum: PromotionStatus,
+    name: 'status',
+    default: PromotionStatus.DRAFT,
+  })
+  status!: PromotionStatus;
 
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt!: Date;

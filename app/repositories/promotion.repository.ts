@@ -9,6 +9,7 @@ import {
   UpdatePromotionRequestDto,
 } from '../dtos/request/promotion/promotion.request';
 import { PromotionResponseDto } from '../dtos/response/promotion/promotion.response';
+import PromotionStatus from '../models/enum/promotion.enum';
 // ... các imports khác
 
 export class PromotionRepository {
@@ -220,6 +221,7 @@ export class PromotionRepository {
     note: p.note,
     createdAt: p.createdAt,
     updatedAt: p.updatedAt,
+    status: p.status,
   });
 
   async deactivateAllForProducts(productIds: string[]): Promise<void> {
@@ -276,5 +278,45 @@ export class PromotionRepository {
       page,
       limit,
     };
+  }
+
+  async submit(id: string): Promise<PromotionResponseDto> {
+    const promotion = await this.repo.findOneBy({ id });
+    if (!promotion) {
+      throw new Error('Promotion not found');
+    }
+    promotion.status = PromotionStatus.SUBMITTED;
+    await this.repo.save(promotion);
+    return this.getById(id);
+  }
+
+  async deactivateAllForProductsExcept(
+    productIds: string[],
+    excludePromotionId: string,
+  ): Promise<void> {
+    if (productIds.length === 0) return;
+
+    const promotionProducts = await this.promotionProductRepo.find({
+      where: { product: { id: In(productIds) } },
+      relations: { promotion: true },
+    });
+
+    const promotionIds = [
+      ...new Set(
+        promotionProducts
+          .filter(
+            (pp) =>
+              pp.promotion.id !== excludePromotionId &&
+              pp.promotion.active === true &&
+              pp.promotion.status === PromotionStatus.SUBMITTED,
+          )
+          .map((pp) => pp.promotion.id),
+      ),
+    ];
+
+    if (promotionIds.length > 0) {
+      // Deactivate các promotions cũ
+      await this.repo.update({ id: In(promotionIds) }, { active: false });
+    }
   }
 }

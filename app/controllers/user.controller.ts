@@ -9,7 +9,7 @@ import { validate } from 'class-validator';
 import { ValidationErrorDto } from '../dtos/response/response.dto';
 import { ApiResponse } from '../dtos/response/api.response.dto';
 import { ICloudService } from '../services/cloud/cloud.service.interface';
-import { CloudinaryService } from '../services/cloud/implement/cloudinary.service.implement';
+import { CloudinaryService } from '../services/cloud/implements/cloudinary.service.implement';
 
 export class UserController {
   private readonly userService: IUserService;

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { vnpayService } from '../services/payment/implement/vnpay.service.implement';
+import { vnpayService } from '../services/payment/implements/vnpay.service.implement';
 import { OrderService } from '../services/order/implements/order.service.implement';
 import { ApiResponse } from '../dtos/response/api.response.dto';
 import OrderStatus from '../models/enum/order_status.enum';

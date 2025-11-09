@@ -17,7 +17,7 @@ import { AuthService } from '../../auth/implements/auth.service.implement';
 import { IAuthService } from '../../auth/auth.service.interface';
 import { ICartService } from '../../cart/cart.service.interface';
 import CreateCartRequestDto from '../../../dtos/request/cart/cart.request';
-import CartService from '../../cart/implement/cart.service.implement';
+import CartService from '../../cart/implements/cart.service.implement';
 import IOtpService from '../../otp/otp.service.interface';
 import { IEmailService } from '../../email/email.service.interface';
 import { EmailService } from '../../email/implements/email.service.implement';

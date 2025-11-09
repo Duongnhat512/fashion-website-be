@@ -12,6 +12,7 @@ import {
   Min,
 } from 'class-validator';
 import PromotionType from '../../../models/enum/promotional_type.enum';
+import PromotionStatus from '../../../models/enum/promotion.enum';
 
 export class CreatePromotionRequestDto {
   @IsOptional()
@@ -36,15 +37,19 @@ export class CreatePromotionRequestDto {
 
   @IsNotEmpty()
   @IsDateString()
-  startDate!: string;
+  startDate?: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsDateString()
-  endDate!: string;
+  endDate?: string;
 
   @IsOptional()
   @IsBoolean()
   active?: boolean;
+
+  @IsOptional()
+  @IsEnum(PromotionStatus)
+  status?: PromotionStatus;
 
   @IsOptional()
   note?: string;

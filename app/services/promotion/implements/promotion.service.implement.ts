@@ -13,6 +13,7 @@ import { ProductRepository } from '../../../repositories/product.repository';
 import { ProductCacheService } from '../../product/implements/product_cache.service.implement';
 import { isEffectiveNow } from '../../../utils/promotion.util';
 import { RedisSearchService } from '../../redis_search/implements/redis_search.service.implement';
+import PromotionStatus from '../../../models/enum/promotion.enum';
 
 export class PromotionService implements IPromotionService {
   private readonly repo = new PromotionRepository();
@@ -48,7 +49,6 @@ export class PromotionService implements IPromotionService {
       let limit = 100;
 
       while (true) {
-        page += 1;
         const result = await this.redisService.searchProducts(
           '',
           dto.categoryId,
@@ -63,6 +63,7 @@ export class PromotionService implements IPromotionService {
         if (result.products.length < limit) {
           break;
         }
+        page += 1;
       }
 
       productIds = categoryProducts.map((p: any) => p.id);
@@ -73,76 +74,74 @@ export class PromotionService implements IPromotionService {
       productIds = Array.from(productIdsSet);
     }
 
-    if (productIds.length > 0) {
-      await this.repo.deactivateAllForProducts(productIds);
-
-      for (const productId of productIds) {
-        await this.removeFromVariants(productId);
-      }
-    }
-
-    let shouldBeActive = dto.active ?? true;
-
-    if (dto.startDate) {
-      const startDate = new Date(dto.startDate);
-      const now = new Date();
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const promotionStart = new Date(
-        startDate.getFullYear(),
-        startDate.getMonth(),
-        startDate.getDate(),
+    if (productIds.length === 0) {
+      throw new Error(
+        'Phải chọn ít nhất 1 sản phẩm (qua productIds hoặc categoryId)',
       );
-
-      const promotionEnd = new Date(dto.endDate);
-      const promotionEndDate = new Date(
-        promotionEnd.getFullYear(),
-        promotionEnd.getMonth(),
-        promotionEnd.getDate(),
-      );
-
-      if (
-        promotionStart > today &&
-        promotionStart < now &&
-        promotionEndDate > now
-      ) {
-        shouldBeActive = false;
-      } else {
-        shouldBeActive = true;
-      }
     }
 
     const created = await this.repo.create({
       ...dto,
-      active: shouldBeActive,
+      status: PromotionStatus.DRAFT,
+      active: false,
     });
 
-    const finalProductIds = created.productIds;
+    return created;
+  }
+
+  async update(dto: UpdatePromotionRequestDto): Promise<PromotionResponseDto> {
+    const existing = await this.repo.getById(dto.id);
+
+    if (existing.status !== PromotionStatus.DRAFT) {
+      throw new Error('Chỉ có thể cập nhật promotion khi ở trạng thái DRAFT');
+    }
+
+    const updated = await this.repo.update({
+      ...dto,
+    });
+
+    return updated;
+  }
+
+  async submit(id: string): Promise<PromotionResponseDto> {
+    const promotion = await this.repo.getById(id);
+
+    if (promotion.status !== PromotionStatus.DRAFT) {
+      throw new Error('Chỉ có thể submit promotion khi ở trạng thái DRAFT');
+    }
+
+    const shouldBeActive = this.calculateActiveStatus(
+      promotion.startDate || null,
+      promotion.endDate || null,
+    );
+
+    if (shouldBeActive && promotion.productIds.length > 0) {
+      await this.repo.deactivateAllForProductsExcept(promotion.productIds, id);
+    }
+
+    const updated = await this.repo.submit(id);
 
     if (
-      created.active &&
-      isEffectiveNow(created.startDate || null, created.endDate || null)
+      updated.active &&
+      isEffectiveNow(updated.startDate || null, updated.endDate || null)
     ) {
-      for (const productId of finalProductIds) {
+      for (const productId of updated.productIds) {
         await this.applyToVariants(
           productId,
-          created.type,
-          created.value,
-          created.note,
+          updated.type,
+          updated.value,
+          updated.note,
         );
       }
     }
 
-    return created;
+    return updated;
   }
 
   async activate(id: string): Promise<void> {
     const p = await this.repo.getById(id);
 
     await this.repo.deactivateAllForProducts(p.productIds);
-
-    for (const productId of p.productIds) {
-      await this.removeFromVariants(productId);
-    }
 
     await this.repo.update({ id, active: true });
 
@@ -171,41 +170,6 @@ export class PromotionService implements IPromotionService {
     for (const productId of p.productIds) {
       await this.removeFromVariants(productId);
     }
-  }
-
-  async update(dto: UpdatePromotionRequestDto): Promise<PromotionResponseDto> {
-    const existing = await this.repo.getById(dto.id);
-
-    if (dto.productIds || dto.categoryId) {
-      for (const productId of existing.productIds) {
-        await this.removeFromVariants(productId);
-      }
-    }
-
-    const updated = await this.repo.update(dto);
-    const productIds = updated.productIds;
-
-    if (updated.active) {
-      if (isEffectiveNow(updated.startDate || null, updated.endDate || null)) {
-        for (const productId of productIds) {
-          await this.applyToVariants(
-            productId,
-            updated.type,
-            updated.value,
-            updated.note,
-          );
-        }
-      } else {
-        for (const productId of productIds) {
-          await this.removeFromVariants(productId);
-        }
-      }
-    } else {
-      for (const productId of productIds) {
-        await this.removeFromVariants(productId);
-      }
-    }
-    return updated;
   }
 
   async getById(id: string): Promise<PromotionResponseDto> {
@@ -253,5 +217,43 @@ export class PromotionService implements IPromotionService {
     }));
     await this.variantRepo.save(variants);
     await this.productCache.indexProduct({ ...product, variants } as any);
+  }
+
+  private calculateActiveStatus(
+    startDate?: Date | null,
+    endDate?: Date | null,
+  ): boolean {
+    if (!startDate && !endDate) {
+      return true;
+    }
+
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    if (startDate) {
+      const promotionStart = new Date(
+        startDate.getFullYear(),
+        startDate.getMonth(),
+        startDate.getDate(),
+      );
+
+      if (promotionStart > today) {
+        return false;
+      }
+    }
+
+    if (endDate) {
+      const promotionEnd = new Date(
+        endDate.getFullYear(),
+        endDate.getMonth(),
+        endDate.getDate(),
+      );
+
+      if (promotionEnd < today) {
+        return false;
+      }
+    }
+
+    return true;
   }
 }
