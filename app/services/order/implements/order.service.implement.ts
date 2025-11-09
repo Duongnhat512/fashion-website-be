@@ -10,18 +10,25 @@ import { AppDataSource } from '../../../config/data_source';
 import OrderStatus from '../../../models/enum/order_status.enum';
 import InventoryRepository from '../../../repositories/inventory.repository';
 import { OrderItemRepository } from '../../../repositories/order_item.repository';
+import CartItemRepository from '../../../repositories/cart_item.repository';
+import CartRepository from '../../../repositories/cart.repository';
+import CartItemRequestDto from '../../../dtos/request/cart/cart_item.request';
 
 export class OrderService implements IOrderService {
   private readonly orderRepository: OrderRepository;
   private readonly dataSource: DataSource;
   private readonly inventoryRepository: InventoryRepository;
   private readonly orderItemRepository: OrderItemRepository;
+  private readonly cartRepository: CartRepository;
+  private readonly cartItemRepository: CartItemRepository;
 
   constructor() {
     this.orderRepository = new OrderRepository();
     this.dataSource = AppDataSource;
     this.inventoryRepository = new InventoryRepository();
     this.orderItemRepository = new OrderItemRepository();
+    this.cartRepository = new CartRepository();
+    this.cartItemRepository = new CartItemRepository();
   }
 
   async updateOrder(order: UpdateOrderRequestDto): Promise<OrderResponseDto> {
@@ -96,10 +103,39 @@ export class OrderService implements IOrderService {
           const inv = await this.inventoryRepository.getInventoryById(
             allocation.inventory.id,
           );
-          if (!inv) throw new Error('Inventory not found');
+          if (!inv) throw new Error('Không tìm thấy khoản nhập kho');
 
           inv.reserved += allocation.item.quantity;
           await this.inventoryRepository.updateInventory(inv);
+        }
+
+        const cart = await this.cartRepository.findCartByUserId(order.user.id);
+
+        if (cart && order.items?.length) {
+          for (const it of order.items) {
+            const existing = await this.cartItemRepository.getCartItem({
+              cartId: cart.id,
+              productId: it.product.id,
+              variantId: it.variant.id,
+              quantity: it.quantity,
+            } as CartItemRequestDto);
+
+            if (!existing) continue;
+
+            const remaining = existing.quantity - it.quantity;
+
+            if (remaining > 0) {
+              await this.cartItemRepository.updateCartItem({
+                id: existing.id,
+                cartId: cart.id,
+                productId: it.product.id,
+                variantId: it.variant.id,
+                quantity: remaining,
+              } as CartItemRequestDto);
+            } else {
+              await this.cartItemRepository.removeCartItem(existing.id);
+            }
+          }
         }
 
         return createdOrder;
@@ -157,7 +193,7 @@ export class OrderService implements IOrderService {
     await this.orderRepository.updateOrder(order);
     return order;
   }
-  
+
   async getOrdersByUserId(userId: string): Promise<OrderResponseDto[]> {
     return this.orderRepository.getOrdersByUserId(userId);
   }

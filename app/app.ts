@@ -30,6 +30,8 @@ import { securityConfig } from './config/security.config';
 import logger from './utils/logger';
 import inventoryRouter from './routers/inventory.route';
 import uploadRouter from './routers/upload.route';
+import promotionRouter from './routers/promotion.route';
+import { initializePromotionScheduler } from './schedulers/promotion.scheduler';
 
 const app: Application = express();
 
@@ -41,6 +43,7 @@ async function initializeApp() {
     await AppDataSource.initialize();
     await initRedis();
     await initializeProductSearch();
+    initializePromotionScheduler();
     logger.info('Application initialized successfully');
   } catch (error) {
     logger.error('Failed to initialize application:', error);
@@ -142,6 +145,7 @@ app.use(`${apiVersion}/payments`, paymentRouter);
 app.use(`${apiVersion}/carts`, cartRouter);
 app.use(`${apiVersion}/inventories`, inventoryRouter);
 app.use(`${apiVersion}/uploads`, uploadRouter);
+app.use(`${apiVersion}/promotions`, promotionRouter);
 
 // 404 handler
 app.use('*', (req, res) => {
