@@ -1,11 +1,12 @@
 import {
+  BeforeInsert,
   Column,
   CreateDateColumn,
   Entity,
   JoinColumn,
   ManyToOne,
   OneToMany,
-  PrimaryGeneratedColumn,
+  PrimaryColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { Color } from './color.model';
@@ -15,10 +16,12 @@ import CartItem from './cart_item.model';
 
 @Entity({ name: 'variants' })
 export class Variant {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn({ type: 'varchar', length: 255 })
   id!: string;
 
-  @ManyToOne(() => Product, (product) => product.variants)
+  @ManyToOne(() => Product, (product) => product.variants, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'product_id' })
   product!: Product;
 
@@ -61,4 +64,15 @@ export class Variant {
 
   @OneToMany(() => CartItem, (cartItem) => cartItem.variant)
   cartItems?: CartItem[];
+
+  @BeforeInsert()
+  async generateCode() {
+    const hrTime = process.hrtime.bigint();
+    const random = Math.random().toString(36).substring(2, 7);
+    this.id = `VAR-${hrTime}-${random}`.toUpperCase();
+  }
+
+  constructor(id: string) {
+    this.id = id;
+  }
 }

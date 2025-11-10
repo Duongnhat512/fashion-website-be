@@ -2,13 +2,14 @@ import { IsOptional } from 'class-validator';
 import { Category } from './category.model';
 import {
   Entity,
-  PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
   OneToMany,
+  BeforeInsert,
+  PrimaryColumn,
 } from 'typeorm';
 import { Variant } from './variant.model';
 import { OrderItem } from './order_item.model';
@@ -17,7 +18,7 @@ import { Review } from './review.model';
 
 @Entity({ name: 'products' })
 export class Product {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn({ type: 'varchar', length: 255 })
   id!: string;
 
   @Column({ type: 'varchar', length: 255 })
@@ -69,4 +70,16 @@ export class Product {
 
   @OneToMany(() => Review, (review) => review.product)
   reviews?: Review[];
+
+  @BeforeInsert()
+  async generateCode() {
+    const hrTime = process.hrtime.bigint();
+    const random = Math.random().toString(36).substring(2, 5).toUpperCase();
+
+    this.id = `PRO-${hrTime}-${random}`;
+  }
+
+  constructor(id: string) {
+    this.id = id;
+  }
 }

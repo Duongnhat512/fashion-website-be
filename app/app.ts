@@ -37,7 +37,7 @@ import statisticsRouter from './routers/statistics.route';
 import reviewRouter from './routers/review.route';
 
 const app: Application = express();
-
+app.set('trust proxy', true);
 const apiVersion = '/api/v1';
 
 async function initializeApp() {

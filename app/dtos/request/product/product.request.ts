@@ -14,6 +14,10 @@ import {
 
 export class ProductRequestDto {
   @IsString()
+  @IsOptional()
+  id?: string;
+
+  @IsString()
   @IsNotEmpty({ message: 'Tên sản phẩm không được để trống' })
   name!: string;
 

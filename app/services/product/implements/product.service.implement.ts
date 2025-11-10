@@ -137,4 +137,12 @@ export class ProductService implements IProductService {
       throw error;
     }
   }
+
+  async getProductBySlug(slug: string): Promise<ProductResponseDto | null> {
+    return this.productRepository.getProductBySlug(slug);
+  }
+
+  async getProductByName(name: string): Promise<ProductResponseDto | null> {
+    return this.productRepository.getProductByName(name);
+  }
 }

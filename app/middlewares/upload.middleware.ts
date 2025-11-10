@@ -31,8 +31,17 @@ export const upload = multer({
   },
 });
 
+export const uploadForImport = multer({
+  storage: storage,
+  limits: {
+    fileSize: securityConfig.fileUpload.maxSize,
+  },
+});
+
 export const uploadSingle = upload.any();
 
 export const uploadMultiple = upload.array('images', 10);
 
 export const uploadProductWithVariants = upload.any();
+
+export const uploadForImportSingle = uploadForImport.any();

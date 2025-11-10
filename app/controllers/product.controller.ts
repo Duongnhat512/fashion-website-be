@@ -16,14 +16,22 @@ import { Category } from '../models/category.model';
 import { Color } from '../models/color.model';
 import { ICloudService } from '../services/cloud/cloud.service.interface';
 import { CloudinaryService } from '../services/cloud/implements/cloudinary.service.implement';
+import { IImportService } from '../services/importer/product_import.service.interface';
+import { ProductImportService } from '../services/importer/implements/product_import.service.implement';
+import { IVariantService } from '../services/product/variant.service.interface';
+import { VariantService } from '../services/product/implements/variant.service.implement';
 
 export class ProductController {
   private readonly productService: IProductService;
   private readonly cloudinaryService: ICloudService;
+  private readonly importService: IImportService;
+  private readonly variantService: IVariantService;
 
   constructor() {
     this.productService = new ProductService();
     this.cloudinaryService = new CloudinaryService();
+    this.importService = new ProductImportService();
+    this.variantService = new VariantService();
   }
 
   async getProductById(req: Request, res: Response) {
@@ -328,6 +336,394 @@ export class ProductController {
           },
         ]),
       );
+    }
+  }
+
+  async importProducts(req: Request, res: Response) {
+    try {
+      const file = req.file;
+      if (!file) {
+        return res.status(400).json(
+          ApiResponse.error('Thiếu file', [
+            {
+              field: 'file',
+              message: ['Vui lòng upload file'],
+            },
+          ]),
+        );
+      }
+
+      // Determine file type
+      const fileExtension = file.originalname.split('.').pop()?.toLowerCase();
+      let parseResult;
+
+      switch (fileExtension) {
+        case 'json':
+          parseResult = await this.importService.parseJSON(file);
+          break;
+        case 'csv':
+          parseResult = await this.importService.parseCSV(file);
+          break;
+        case 'xlsx':
+        case 'xls':
+          parseResult = await this.importService.parseExcel(file);
+          break;
+        default:
+          return res.status(400).json(
+            ApiResponse.error('Định dạng file không hỗ trợ', [
+              {
+                field: 'file',
+                message: ['Chỉ hỗ trợ file JSON, CSV, Excel (.xlsx, .xls)'],
+              },
+            ]),
+          );
+      }
+
+      // Validate parsed data
+      if (parseResult.errors.length > 0 && parseResult.successCount === 0) {
+        return res.status(400).json(
+          ApiResponse.error(
+            'Tất cả dòng đều có lỗi',
+            parseResult.errors.map((err: any) => ({
+              field: err.field || '',
+              message: [err.message],
+              row: err.row,
+            })),
+          ),
+        );
+      }
+
+      // Import products
+      const importedProducts = [];
+      const importErrors = [];
+
+      for (const item of parseResult.data) {
+        try {
+          // Validate product DTO
+          const productErrors = await validate(item.product);
+          if (productErrors.length > 0) {
+            importErrors.push({
+              product: item.product.name,
+              errors: productErrors.map((e) => ({
+                field: e.property,
+                message: Object.values(e.constraints || {}),
+              })),
+            });
+            continue;
+          }
+
+          // Validate variants
+          if (item.variants && item.variants.length > 0) {
+            for (const variant of item.variants) {
+              const variantErrors = await validate(variant);
+              if (variantErrors.length > 0) {
+                importErrors.push({
+                  product: item.product.name,
+                  variant: variant.sku,
+                  errors: variantErrors.map((e) => ({
+                    field: e.property,
+                    message: Object.values(e.constraints || {}),
+                  })),
+                });
+              }
+            }
+          }
+
+          // Create product
+          const product = await this.productService.createProduct(item.product);
+          importedProducts.push(product);
+        } catch (error: any) {
+          importErrors.push({
+            product: item.product.name,
+            message: error.message || 'Lỗi không xác định',
+          });
+        }
+      }
+
+      // Return result
+      res.status(200).json(
+        ApiResponse.success('Import sản phẩm', {
+          summary: {
+            totalRows: parseResult.totalRows,
+            successCount: importedProducts.length,
+            errorCount: parseResult.errorCount + importErrors.length,
+            parseErrors: parseResult.errors,
+            importErrors: importErrors,
+          },
+          products: importedProducts,
+        }),
+      );
+    } catch (error: any) {
+      res.status(500).json(
+        ApiResponse.error('Import sản phẩm thất bại', [
+          {
+            field: 'import',
+            message: error.message || 'Lỗi không xác định',
+          },
+        ]),
+      );
+    }
+  }
+
+  /**
+   * Import products only (from separate file)
+   */
+  async importProductsOnly(req: Request, res: Response) {
+    try {
+      const files = (req.files as Express.Multer.File[]) || [];
+      const file = req.file || files[0]; // Lấy file đầu tiên hoặc từ req.file
+
+      if (!file) {
+        return res.status(400).json(
+          ApiResponse.error('Thiếu file', [
+            {
+              field: 'file',
+              message: [
+                `Không tìm thấy file. req.files: ${JSON.stringify(
+                  files.map((f) => ({
+                    fieldname: f.fieldname,
+                    originalname: f.originalname,
+                  })),
+                )}, req.file: ${req.file?.originalname || 'undefined'}`,
+              ],
+            },
+          ]),
+        );
+      }
+
+      const fileExtension = file.originalname.split('.').pop()?.toLowerCase();
+      let parseResult;
+
+      switch (fileExtension) {
+        case 'json':
+          parseResult = await this.importService.parseProductsOnlyJSON(file);
+          break;
+        case 'csv':
+          parseResult = await this.importService.parseProductsOnlyCSV(file);
+          break;
+        case 'xlsx':
+        case 'xls':
+          parseResult = await this.importService.parseProductsOnlyExcel(file);
+          break;
+        default:
+          return res.status(400).json(
+            ApiResponse.error('Định dạng file không hỗ trợ', [
+              {
+                field: 'file',
+                message: ['Chỉ hỗ trợ file JSON, CSV, Excel'],
+              },
+            ]),
+          );
+      }
+
+      if (parseResult.errors.length > 0 && parseResult.successCount === 0) {
+        return res.status(400).json(
+          ApiResponse.error(
+            'Tất cả dòng đều có lỗi',
+            parseResult.errors.map((err: any) => ({
+              field: err.field || '',
+              message: [err.message],
+              row: err.row,
+            })),
+          ),
+        );
+      }
+
+      const importedProducts = [];
+      const importErrors = [];
+
+      for (const productDto of parseResult.data) {
+        try {
+          const errors = await validate(productDto);
+          if (errors.length > 0) {
+            importErrors.push({
+              product: productDto.name,
+              errors: errors.map((e) => ({
+                field: e.property,
+                message: Object.values(e.constraints || {}),
+              })),
+            });
+            continue;
+          }
+
+          const product = await this.productService.createProduct(productDto);
+          importedProducts.push(product);
+        } catch (error: any) {
+          importErrors.push({
+            product: productDto.name,
+            message: error.message || 'Lỗi không xác định',
+          });
+        }
+      }
+
+      res.status(200).json(
+        ApiResponse.success('Import sản phẩm', {
+          summary: {
+            totalRows: parseResult.totalRows,
+            successCount: importedProducts.length,
+            errorCount: parseResult.errorCount + importErrors.length,
+            parseErrors: parseResult.errors,
+            importErrors: importErrors,
+          },
+          products: importedProducts,
+        }),
+      );
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(
+          ApiResponse.error('Import sản phẩm thất bại', [
+            { field: 'import', message: error.message || 'Lỗi không xác định' },
+          ]),
+        );
+    }
+  }
+
+  /**
+   * Import variants only (from separate file)
+   * Requires products to exist first
+   */
+  async importVariantsOnly(req: Request, res: Response) {
+    try {
+      const files = (req.files as Express.Multer.File[]) || [];
+      const file = req.file || files[0]; // Lấy file đầu tiên hoặc từ req.file
+
+      if (!file) {
+        return res
+          .status(400)
+          .json(
+            ApiResponse.error('Thiếu file', [
+              { field: 'file', message: ['Vui lòng upload file'] },
+            ]),
+          );
+      }
+
+      const fileExtension = file.originalname.split('.').pop()?.toLowerCase();
+      let parseResult;
+
+      switch (fileExtension) {
+        case 'json':
+          parseResult = await this.importService.parseVariantsOnlyJSON(file);
+          break;
+        case 'csv':
+          parseResult = await this.importService.parseVariantsOnlyCSV(file);
+          break;
+        case 'xlsx':
+        case 'xls':
+          parseResult = await this.importService.parseVariantsOnlyExcel(file);
+          break;
+        default:
+          return res.status(400).json(
+            ApiResponse.error('Định dạng file không hỗ trợ', [
+              {
+                field: 'file',
+                message: ['Chỉ hỗ trợ file JSON, CSV, Excel'],
+              },
+            ]),
+          );
+      }
+
+      if (parseResult.errors.length > 0 && parseResult.successCount === 0) {
+        return res.status(400).json(
+          ApiResponse.error(
+            'Tất cả dòng đều có lỗi',
+            parseResult.errors.map((err: any) => ({
+              field: err.field || '',
+              message: [err.message],
+              row: err.row,
+            })),
+          ),
+        );
+      }
+
+      const importedVariants = [];
+      const importErrors = [];
+
+      for (const item of parseResult.data) {
+        try {
+          // Find product by ID, slug, or name
+          let product = null;
+          if (item.productId) {
+            try {
+              product = await this.productService.getProductById(
+                item.productId,
+              );
+            } catch (e) {
+              console.error('Failed to get product by ID:', e);
+            }
+          }
+
+          if (!product) {
+            importErrors.push({
+              productId: item.productId,
+              productSlug: item.productSlug,
+              message: 'Không tìm thấy sản phẩm',
+            });
+            continue;
+          }
+
+          // Validate and create variants
+          for (const variantDto of item.variants) {
+            try {
+              const errors = await validate(variantDto);
+              if (errors.length > 0) {
+                importErrors.push({
+                  product: product.name,
+                  variant: variantDto.sku,
+                  errors: errors.map((e) => ({
+                    field: e.property,
+                    message: Object.values(e.constraints || {}),
+                  })),
+                });
+                continue;
+              }
+
+              // Set product reference and create variant
+              variantDto.product = { id: product.id } as any;
+              const createdVariant = await this.variantService.createVariant(
+                variantDto,
+              );
+              importedVariants.push({
+                product: product.name,
+                variant: createdVariant,
+              });
+            } catch (error: any) {
+              importErrors.push({
+                product: product.name,
+                variant: variantDto.sku,
+                message: error.message || 'Lỗi không xác định',
+              });
+            }
+          }
+        } catch (error: any) {
+          importErrors.push({
+            productId: item.productId,
+            productSlug: item.productSlug,
+            message: error.message || 'Lỗi không xác định',
+          });
+        }
+      }
+
+      res.status(200).json(
+        ApiResponse.success('Import variants', {
+          summary: {
+            totalRows: parseResult.totalRows,
+            successCount: importedVariants.length,
+            errorCount: parseResult.errorCount + importErrors.length,
+            parseErrors: parseResult.errors,
+            importErrors: importErrors,
+          },
+          variants: importedVariants,
+        }),
+      );
+    } catch (error: any) {
+      res
+        .status(500)
+        .json(
+          ApiResponse.error('Import variants thất bại', [
+            { field: 'import', message: error.message || 'Lỗi không xác định' },
+          ]),
+        );
     }
   }
 }

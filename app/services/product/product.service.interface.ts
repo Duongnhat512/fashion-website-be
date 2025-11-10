@@ -12,6 +12,8 @@ export interface IProductService {
   updateProduct(product: UpdateProductRequestDto): Promise<ProductResponseDto>;
   deleteProduct(id: string): Promise<void>;
   getProductById(id: string): Promise<ProductResponseDto>;
+  getProductBySlug(slug: string): Promise<ProductResponseDto | null>;
+  getProductByName(name: string): Promise<ProductResponseDto | null>;
   getAllProducts(
     page: number,
     limit: number,

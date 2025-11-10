@@ -52,7 +52,10 @@
     "typeorm": "^0.3.26",
     "uuid": "^11.1.0",
     "vnpay": "^2.4.4",
-    "winston": "^3.18.3"
+    "winston": "^3.18.3",
+    "csv-parser": "^3.0.0",
+    "exceljs": "^4.4.0",
+    "papaparse": "^5.4.1"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",

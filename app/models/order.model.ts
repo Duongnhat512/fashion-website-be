@@ -1,4 +1,5 @@
 import {
+  BeforeInsert,
   Column,
   CreateDateColumn,
   Entity,
@@ -6,7 +7,7 @@ import {
   ManyToOne,
   OneToMany,
   OneToOne,
-  PrimaryGeneratedColumn,
+  PrimaryColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import User from './user.model';
@@ -16,8 +17,8 @@ import { OrderShippingAddress } from './order_shipping_address.model';
 
 @Entity('orders')
 export class Order {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryColumn({ type: 'varchar', length: 255 })
+  id!: string;
 
   @ManyToOne(() => User, (user) => user.orders)
   @JoinColumn({ name: 'user_id' })
@@ -56,4 +57,11 @@ export class Order {
     { cascade: true },
   )
   shippingAddress: OrderShippingAddress;
+
+  @BeforeInsert()
+  async generateCode() {
+    const hrTime = process.hrtime.bigint();
+    const random = Math.random().toString(36).substring(2, 7);
+    this.id = `ORD-${hrTime}-${random}`.toUpperCase();
+  }
 }

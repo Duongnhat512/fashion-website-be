@@ -18,9 +18,13 @@ export class ProductRepository {
   }
 
   async createProduct(product: ProductRequestDto): Promise<ProductResponseDto> {
-    const newProduct = await this.productRepository.save({
+    const newProduct = this.productRepository.create({
       ...product,
+      id: undefined,
     });
+
+    await this.productRepository.save(newProduct);
+
     return this.getProductById(newProduct.id);
   }
 
@@ -240,5 +244,39 @@ export class ProductRepository {
       ratingCount,
       updatedAt: new Date(),
     });
+  }
+
+  async getProductBySlug(slug: string): Promise<ProductResponseDto | null> {
+    const product = await this.productRepository.findOne({
+      where: { slug },
+      relations: {
+        category: true,
+      },
+    });
+    if (!product) {
+      return null;
+    }
+    return {
+      ...product,
+      categoryId: product.category?.id,
+      brand: product.brand ?? '',
+    };
+  }
+
+  async getProductByName(name: string): Promise<ProductResponseDto | null> {
+    const product = await this.productRepository.findOne({
+      where: { name },
+      relations: {
+        category: true,
+      },
+    });
+    if (!product) {
+      return null;
+    }
+    return {
+      ...product,
+      categoryId: product.category?.id,
+      brand: product.brand ?? '',
+    };
   }
 }

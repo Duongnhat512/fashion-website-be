@@ -17,8 +17,8 @@ class CartItemRepository {
     return this.cartItemRepository.save({
       ...(cartItemData.id && { id: cartItemData.id }),
       cart: { id: cartItemData.cartId } as Cart,
-      product: { id: cartItemData.productId } as Product,
-      variant: { id: cartItemData.variantId } as Variant,
+      product: new Product(cartItemData.productId),
+      variant: new Variant(cartItemData.variantId),
       quantity: cartItemData.quantity,
     });
   }
@@ -28,8 +28,8 @@ class CartItemRepository {
       id: cartItem.id,
       quantity: cartItem.quantity,
       cart: { id: cartItem.cartId } as Cart,
-      product: { id: cartItem.productId } as Product,
-      variant: { id: cartItem.variantId } as Variant,
+      product: new Product(cartItem.productId),
+      variant: new Variant(cartItem.variantId),
     });
   }
 
@@ -41,8 +41,8 @@ class CartItemRepository {
     return this.cartItemRepository.findOne({
       where: {
         cart: { id: cartItem.cartId } as Cart,
-        product: { id: cartItem.productId } as Product,
-        variant: { id: cartItem.variantId } as Variant,
+        product: new Product(cartItem.productId),
+        variant: new Variant(cartItem.variantId),
       },
     });
   }

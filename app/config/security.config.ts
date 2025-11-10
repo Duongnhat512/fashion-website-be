@@ -69,7 +69,18 @@ export const securityConfig = {
   // File upload restrictions
   fileUpload: {
     maxSize: 10 * 1024 * 1024, // 10MB
-    allowedTypes: ['image/jpeg', 'image/png', 'image/webp'],
+    allowedTypes: [
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+      'application/json',
+      'text/json',
+      'text/csv',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel',
+      'application/octet-stream',
+      'text/plain',
+    ],
     allowedExtensions: ['.jpg', '.jpeg', '.png', '.webp'],
   },
 

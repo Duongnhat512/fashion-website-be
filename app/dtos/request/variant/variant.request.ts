@@ -12,6 +12,10 @@ import { Color } from '../../../models/color.model';
 
 export class VariantRequestDto {
   @IsString()
+  @IsOptional()
+  id?: string;
+
+  @IsString()
   @IsNotEmpty({ message: 'SKU không được để trống' })
   sku!: string;
 
@@ -36,8 +40,8 @@ export class VariantRequestDto {
   discountPercent?: number;
 
   @IsString()
-  @IsNotEmpty({ message: 'Ảnh không được để trống' })
-  imageUrl!: string;
+  @IsOptional()
+  imageUrl?: string;
 
   @IsBoolean()
   @IsOptional()

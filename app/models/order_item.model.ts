@@ -1,4 +1,5 @@
 import {
+  BeforeInsert,
   Column,
   CreateDateColumn,
   Entity,
@@ -14,7 +15,7 @@ import { Warehouse } from './warehouse.model';
 
 @Entity('order_items')
 export class OrderItem {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn()
   id!: string;
 
   @ManyToOne(() => Order, (order) => order.items, {

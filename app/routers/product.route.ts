@@ -1,7 +1,11 @@
 import { Router } from 'express';
 import { ProductController } from '../controllers/product.controller';
 import { adminOnly } from '../middlewares/auth.middleware';
-import { uploadProductWithVariants } from '../middlewares/upload.middleware';
+import {
+  uploadForImportSingle,
+  uploadProductWithVariants,
+  uploadSingle,
+} from '../middlewares/upload.middleware';
 
 const router = Router();
 const productController = new ProductController();
@@ -18,6 +22,18 @@ router.put('/', adminOnly, uploadProductWithVariants, (req, res) =>
 );
 router.post('/delete/:id', adminOnly, (req, res) =>
   productController.deleteProduct(req, res),
+);
+
+router.post('/import', adminOnly, uploadSingle, (req, res) =>
+  productController.importProducts(req, res),
+);
+
+router.post('/import/products', adminOnly, uploadForImportSingle, (req, res) =>
+  productController.importProductsOnly(req, res),
+);
+
+router.post('/import/variants', adminOnly, uploadForImportSingle, (req, res) =>
+  productController.importVariantsOnly(req, res),
 );
 
 export default router;
