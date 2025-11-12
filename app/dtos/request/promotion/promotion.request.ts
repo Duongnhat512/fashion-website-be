@@ -18,10 +18,6 @@ export class CreatePromotionRequestDto {
   @IsOptional()
   @IsArray()
   @ArrayMinSize(1, { message: 'Phải chọn ít nhất 1 sản phẩm' })
-  @IsUUID(undefined, {
-    each: true,
-    message: 'Mỗi productId phải là UUID hợp lệ',
-  })
   productIds?: string[];
 
   @IsOptional()

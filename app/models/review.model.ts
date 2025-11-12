@@ -24,13 +24,20 @@ export class Review {
   user!: User;
 
   @Column({ type: 'int' })
-  rating!: number; // 1-5 sao
+  rating!: number;
 
   @Column({ type: 'text', nullable: true })
   comment?: string;
 
+  @Column({ type: 'jsonb', nullable: true })
+  images?: string[];
+
+  @ManyToOne(() => Review, (review) => review.replyTo)
+  @JoinColumn({ name: 'reply_to_id' })
+  replyTo?: Review;
+
   @Column({ type: 'boolean', default: false, name: 'is_verified' })
-  isVerified!: boolean; // Đã mua sản phẩm chưa (optional)
+  isVerified!: boolean;
 
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt!: Date;

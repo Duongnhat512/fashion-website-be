@@ -40,7 +40,7 @@ export const uploadForImport = multer({
 
 export const uploadSingle = upload.any();
 
-export const uploadMultiple = upload.array('images', 10);
+export const uploadMultiple = upload.any();
 
 export const uploadProductWithVariants = upload.any();
 

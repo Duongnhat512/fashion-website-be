@@ -8,18 +8,38 @@ import {
 } from '../dtos/request/review/review.request';
 import { validate } from 'class-validator';
 import { ValidationErrorDto } from '../dtos/response/response.dto';
+import { ICloudService } from '../services/cloud/cloud.service.interface';
+import { CloudinaryService } from '../services/cloud/implements/cloudinary.service.implement';
+import { plainToInstance } from 'class-transformer';
 
 export class ReviewController {
   private readonly reviewService: IReviewService;
+  private readonly cloudService: ICloudService;
 
   constructor() {
     this.reviewService = new ReviewService();
+    this.cloudService = new CloudinaryService();
   }
 
   async createReview(req: Request, res: Response) {
+    let publicIds: string[] = [];
+
     try {
-      const createReviewDto = new CreateReviewRequestDto();
-      Object.assign(createReviewDto, req.body);
+      const images = req.files as Express.Multer.File[];
+
+      const imageUrls: string[] = [];
+
+      for (const image of images) {
+        const imageUrl = await this.cloudService.uploadImage(
+          image,
+          'fashion-website/reviews',
+        );
+        imageUrls.push(imageUrl.url);
+        publicIds.push(imageUrl.publicId);
+      }
+
+      const createReviewDto = plainToInstance(CreateReviewRequestDto, req.body);
+      createReviewDto.images = imageUrls;
 
       const errors = await validate(createReviewDto);
       if (errors.length > 0) {
@@ -27,9 +47,7 @@ export class ReviewController {
           field: error.property,
           message: Object.values(error.constraints || {}),
         }));
-        return res
-          .status(400)
-          .json(ApiResponse.validationError(validationErrors));
+        throw new Error(JSON.stringify(validationErrors));
       }
 
       const userId = req.user!.userId;
@@ -42,6 +60,7 @@ export class ReviewController {
         .status(200)
         .json(ApiResponse.success('Tạo đánh giá thành công', review));
     } catch (error: any) {
+      await this.cloudService.deleteMultipleImages(publicIds);
       return res.status(400).json(
         ApiResponse.error(error.message || 'Tạo đánh giá thất bại', [
           {
@@ -54,12 +73,25 @@ export class ReviewController {
   }
 
   async updateReview(req: Request, res: Response) {
+    let publicIds: string[] = [];
+
     try {
-      const updateReviewDto = new UpdateReviewRequestDto();
-      Object.assign(updateReviewDto, {
-        id: req.params.id,
-        ...req.body,
-      });
+      const updateReviewDto = plainToInstance(UpdateReviewRequestDto, req.body);
+      updateReviewDto.id = req.params.id;
+
+      const images = req.files as Express.Multer.File[];
+
+      const imageUrls: string[] = [];
+
+      for (const image of images) {
+        const imageUrl = await this.cloudService.uploadImage(
+          image,
+          'fashion-website/reviews',
+        );
+        imageUrls.push(imageUrl.url);
+      }
+
+      updateReviewDto.images = imageUrls;
 
       const errors = await validate(updateReviewDto);
       if (errors.length > 0) {
@@ -67,9 +99,7 @@ export class ReviewController {
           field: error.property,
           message: Object.values(error.constraints || {}),
         }));
-        return res
-          .status(400)
-          .json(ApiResponse.validationError(validationErrors));
+        throw new Error(JSON.stringify(validationErrors));
       }
 
       const userId = req.user!.userId;
@@ -82,6 +112,8 @@ export class ReviewController {
         .status(200)
         .json(ApiResponse.success('Cập nhật đánh giá thành công', review));
     } catch (error: any) {
+      await this.cloudService.deleteMultipleImages(publicIds);
+
       return res.status(400).json(
         ApiResponse.error(error.message || 'Cập nhật đánh giá thất bại', [
           {

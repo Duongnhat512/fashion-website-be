@@ -28,6 +28,7 @@ export class ReviewRepository {
       ...review,
       product: { id: review.productId } as Product,
       user: { id: userId } as any,
+      replyTo: { id: review.replyToId } as any,
     });
 
     return this.getReviewById(newReview.id);
