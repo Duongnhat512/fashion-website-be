@@ -27,4 +27,5 @@ export interface IProductService {
     page?: number,
     limit?: number,
   ): Promise<PaginatedProductsResponseDto>;
+  createProductWithId(product: ProductRequestDto): Promise<ProductResponseDto>;
 }

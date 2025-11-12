@@ -5,7 +5,6 @@ import {
   IsObject,
   IsOptional,
   IsString,
-  ValidateNested,
 } from 'class-validator';
 import { Product } from '../../../models/product.model';
 import { Color } from '../../../models/color.model';
@@ -52,6 +51,7 @@ export class VariantRequestDto {
   saleNote?: string;
 
   @IsOptional()
+  @IsObject()
   product?: Product;
 }
 

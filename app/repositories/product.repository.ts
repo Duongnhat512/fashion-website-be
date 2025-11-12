@@ -279,4 +279,12 @@ export class ProductRepository {
       brand: product.brand ?? '',
     };
   }
+
+  async createProductWithId(
+    product: ProductRequestDto,
+  ): Promise<ProductResponseDto> {
+    await this.productRepository.save(product);
+
+    return this.getProductById(product.id!);
+  }
 }

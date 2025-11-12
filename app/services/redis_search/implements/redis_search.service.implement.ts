@@ -19,20 +19,11 @@ export class RedisSearchService implements IRedisSearchService {
     const words = normalizedQuery.split(/\s+/).filter(Boolean);
     if (words.length === 0) return '*';
 
-    const fields = [
-      'nameNormalized',
-      'shortDescriptionNormalized',
-      'brandNormalized',
-      'tagsNormalized',
-    ];
+    const searchField = 'searchContent';
 
-    const groups = words.map((w) => {
-      const ors = fields.map((f) => `@${f}:(${w}*)`).join(' | ');
-      return `(${ors})`;
-    });
+    const wordQueries = words.map((word) => `@${searchField}:(${word}*)`);
 
-    const finalQuery = groups.join(' ');
-    return finalQuery;
+    return wordQueries.join(' ');
   }
 
   async searchProducts(
@@ -110,6 +101,10 @@ export class RedisSearchService implements IRedisSearchService {
 
       if (searchQuery === '*') {
         searchQuery = '';
+      }
+
+      if (searchQuery) {
+        searchQuery = `(${searchQuery})`;
       }
 
       if (categoryId) {

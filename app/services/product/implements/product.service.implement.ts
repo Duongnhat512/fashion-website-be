@@ -38,6 +38,12 @@ export class ProductService implements IProductService {
     return newProduct;
   }
 
+  async createProductWithId(
+    product: ProductRequestDto,
+  ): Promise<ProductResponseDto> {
+    return this.productRepository.createProductWithId(product);
+  }
+
   async updateProduct(
     product: UpdateProductRequestDto,
   ): Promise<ProductResponseDto> {

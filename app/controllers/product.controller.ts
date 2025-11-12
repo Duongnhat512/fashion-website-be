@@ -20,18 +20,22 @@ import { IImportService } from '../services/importer/product_import.service.inte
 import { ProductImportService } from '../services/importer/implements/product_import.service.implement';
 import { IVariantService } from '../services/product/variant.service.interface';
 import { VariantService } from '../services/product/implements/variant.service.implement';
+import { IProductCacheService } from '../services/product/product_cache.service.interface';
+import { ProductCacheService } from '../services/product/implements/product_cache.service.implement';
 
 export class ProductController {
   private readonly productService: IProductService;
   private readonly cloudinaryService: ICloudService;
   private readonly importService: IImportService;
   private readonly variantService: IVariantService;
+  private readonly productCacheService: IProductCacheService;
 
   constructor() {
     this.productService = new ProductService();
     this.cloudinaryService = new CloudinaryService();
     this.importService = new ProductImportService();
     this.variantService = new VariantService();
+    this.productCacheService = new ProductCacheService();
   }
 
   async getProductById(req: Request, res: Response) {
@@ -546,7 +550,9 @@ export class ProductController {
             continue;
           }
 
-          const product = await this.productService.createProduct(productDto);
+          const product = await this.productService.createProductWithId(
+            productDto,
+          );
           importedProducts.push(product);
         } catch (error: any) {
           importErrors.push({
@@ -703,6 +709,8 @@ export class ProductController {
           });
         }
       }
+
+      await this.productCacheService.reindexAllProducts();
 
       res.status(200).json(
         ApiResponse.success('Import variants', {

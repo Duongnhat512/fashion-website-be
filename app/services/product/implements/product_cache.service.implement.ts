@@ -107,6 +107,10 @@ export class ProductCacheService implements IProductCacheService {
         'TEXT',
         'NOSTEM',
         'SORTABLE',
+
+        'searchContent',
+        'TEXT',
+        'NOSTEM',
       );
     } catch (error) {
       console.error('Error creating product search index:', error);
@@ -136,6 +140,39 @@ export class ProductCacheService implements IProductCacheService {
     return prices.length > 0 ? Math.max(...prices) : 0;
   }
 
+  private extractVariantSearchText(variants: any[]): string {
+    if (!variants || variants.length === 0) return '';
+
+    const searchTerms: string[] = [];
+
+    for (const variant of variants) {
+      // Thêm tên màu (color.name hoặc color nếu là string)
+      if (variant.color) {
+        // Nếu color là object
+        if (typeof variant.color === 'object' && variant.color.name) {
+          searchTerms.push(normalizeText(variant.color.name));
+        }
+        // Nếu color là string
+        else if (typeof variant.color === 'string') {
+          searchTerms.push(normalizeText(variant.color));
+        }
+      }
+
+      // Thêm size
+      if (variant.size) {
+        searchTerms.push(normalizeText(variant.size));
+      }
+
+      // Thêm SKU nếu cần search theo SKU
+      if (variant.sku) {
+        searchTerms.push(normalizeText(variant.sku));
+      }
+    }
+
+    // Loại bỏ duplicate và join lại
+    return [...new Set(searchTerms)].join(' ');
+  }
+
   /**
    * Lưu product vào Redis cache
    */
@@ -162,6 +199,15 @@ export class ProductCacheService implements IProductCacheService {
         shortDescriptionNormalized: normalizeText(product.shortDescription),
         brandNormalized: normalizeText(product.brand || ''),
         tagsNormalized: normalizeText(product.tags || ''),
+        searchContent: [
+          product.name,
+          product.shortDescription,
+          product.brand,
+          this.extractVariantSearchText(product.variants),
+        ]
+          .filter(Boolean)
+          .map(normalizeText)
+          .join(' '),
       };
 
       await redis.hset(`${this.PRODUCT_PREFIX}${product.id}`, productData);

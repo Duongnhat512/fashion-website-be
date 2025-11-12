@@ -5,10 +5,7 @@ import { ProductRequestDto } from '../../../dtos/request/product/product.request
 import { VariantRequestDto } from '../../../dtos/request/variant/variant.request';
 import { Category } from '../../../models/category.model';
 import { Color } from '../../../models/color.model';
-import { IProductService } from '../../product/product.service.interface';
-import { ProductService } from '../../product/implements/product.service.implement';
-import { VariantService } from '../../product/implements/variant.service.implement';
-import { IVariantService } from '../../product/variant.service.interface';
+import { Product } from '../../../models/product.model';
 
 export interface ImportResult {
   success: boolean;
@@ -45,14 +42,6 @@ export interface VariantOnlyResult {
 }
 
 export class ProductImportService {
-  private readonly productService: IProductService;
-  private readonly variantService: IVariantService;
-
-  constructor() {
-    this.productService = new ProductService();
-    this.variantService = new VariantService();
-  }
-
   /**
    * Parse JSON file
    */
@@ -360,6 +349,7 @@ export class ProductImportService {
     variantDto.imageUrl = row.variantImageUrl || row.imageUrl || '';
     variantDto.onSales = Boolean(row.onSales);
     variantDto.saleNote = row.saleNote || '';
+    variantDto.product = { id: row.productId } as Product;
 
     return variantDto;
   }
@@ -570,7 +560,6 @@ export class ProductImportService {
         }
 
         const productDto = this.createProductDto(normalizedRow);
-        await this.productService.createProduct(productDto);
 
         result.data.push(productDto);
         result.successCount++;
@@ -633,7 +622,6 @@ export class ProductImportService {
         }
 
         const variantDto = this.createVariantDto(normalizedRow);
-        await this.variantService.createVariant(variantDto);
 
         variantMap.get(productKey)!.variants.push(variantDto);
         result.successCount++;
@@ -648,6 +636,7 @@ export class ProductImportService {
 
     result.data = Array.from(variantMap.values());
     result.success = result.errorCount === 0;
+
     return result;
   }
 
