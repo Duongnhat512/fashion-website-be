@@ -40,6 +40,9 @@ const envSchema = Joi.object({
   CLOUDINARY_CLOUD_NAME: Joi.string().required(),
   CLOUDINARY_API_KEY: Joi.string().required(),
   CLOUDINARY_API_SECRET: Joi.string().required(),
+
+  // Gemini AI
+  GEMINI_API_KEY: Joi.string().required(),
 }).unknown();
 
 const { error, value: envVars } = envSchema.validate(process.env);
@@ -92,5 +95,9 @@ export const config = {
     cloudName: envVars.CLOUDINARY_CLOUD_NAME,
     apiKey: envVars.CLOUDINARY_API_KEY,
     apiSecret: envVars.CLOUDINARY_API_SECRET,
+  },
+  gemini: {
+    apiKey: envVars.GEMINI_API_KEY,
+    model: envVars.GEMINI_MODEL,
   },
 };

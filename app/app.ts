@@ -32,9 +32,11 @@ import inventoryRouter from './routers/inventory.route';
 import uploadRouter from './routers/upload.route';
 import promotionRouter from './routers/promotion.route';
 import { initializePromotionScheduler } from './schedulers/promotion.scheduler';
+import { initializeEmbeddingScheduler } from './schedulers/embedding.scheduler';
 import colorRouter from './routers/color.route';
 import statisticsRouter from './routers/statistics.route';
 import reviewRouter from './routers/review.route';
+import chatbotRouter from './routers/chatbot.route';
 
 const app: Application = express();
 
@@ -47,6 +49,7 @@ async function initializeApp() {
     await initRedis();
     await initializeProductSearch();
     initializePromotionScheduler();
+    await initializeEmbeddingScheduler();
     logger.info('Application initialized successfully');
   } catch (error) {
     logger.error('Failed to initialize application:', error);
@@ -151,6 +154,7 @@ app.use(`${apiVersion}/promotions`, promotionRouter);
 app.use(`${apiVersion}/colors`, colorRouter);
 app.use(`${apiVersion}/statistics`, statisticsRouter);
 app.use(`${apiVersion}/reviews`, reviewRouter);
+app.use(`${apiVersion}/chatbot`, chatbotRouter);
 
 // 404 handler
 app.use('*', (req, res) => {

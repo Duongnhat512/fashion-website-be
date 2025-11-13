@@ -11,6 +11,7 @@ import {
 import { RedisSearchService } from '../../../services/redis_search/implements/redis_search.service.implement';
 import { IProductCacheService } from '../product_cache.service.interface';
 import { ProductCacheService } from './product_cache.service.implement';
+import { EmbeddingScheduler } from '../../../schedulers/embedding.scheduler';
 
 export class ProductService implements IProductService {
   private readonly productRepository: ProductRepository;
@@ -31,6 +32,14 @@ export class ProductService implements IProductService {
         newProduct.id,
       );
       await this.productCacheService.indexProduct(productEntity);
+
+      // Generate embedding for new product (async, don't wait)
+      const embeddingScheduler = new EmbeddingScheduler();
+      embeddingScheduler
+        .generateProductEmbedding(newProduct.id)
+        .catch((error) => {
+          console.error('Error generating embedding for new product:', error);
+        });
     } catch (error) {
       console.error('Error indexing new product:', error);
     }
@@ -53,6 +62,15 @@ export class ProductService implements IProductService {
     try {
       updatedProduct = await this.productRepository.getProductById(product.id);
       await this.productCacheService.indexProduct(updatedProduct);
+
+      // Regenerate embedding for updated product (async, don't wait)
+      const embeddingScheduler = new EmbeddingScheduler();
+      embeddingScheduler.generateProductEmbedding(product.id).catch((error) => {
+        console.error(
+          'Error regenerating embedding for updated product:',
+          error,
+        );
+      });
     } catch (error) {
       console.error('Error updating product index:', error);
     }

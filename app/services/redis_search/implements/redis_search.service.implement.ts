@@ -185,6 +185,9 @@ export class RedisSearchService implements IRedisSearchService {
           }
         }
 
+        if (product.embedding) {
+          delete product.embedding;
+        }
         products.push(product);
       }
 
