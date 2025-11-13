@@ -187,4 +187,181 @@ export class StatisticsController {
         );
     }
   };
+
+  // Chi tiết bán hàng sản phẩm
+  getProductSalesDetail = async (
+    req: Request,
+    res: Response,
+  ): Promise<void> => {
+    try {
+      const { startDate, endDate } = req.query;
+      const start = startDate ? new Date(startDate as string) : undefined;
+      const end = endDate ? new Date(endDate as string) : undefined;
+
+      const stats = await this.statisticsService.getProductSalesDetail(
+        start,
+        end,
+      );
+      res
+        .status(200)
+        .json(ApiResponse.success('Chi tiết bán hàng sản phẩm', stats));
+    } catch (error) {
+      res
+        .status(500)
+        .json(
+          ApiResponse.serverError(
+            error instanceof Error ? error.message : 'Lỗi server',
+          ),
+        );
+    }
+  };
+
+  // Top sản phẩm theo doanh thu
+  getTopProductsByRevenue = async (
+    req: Request,
+    res: Response,
+  ): Promise<void> => {
+    try {
+      const { limit, startDate, endDate } = req.query;
+      const start = startDate ? new Date(startDate as string) : undefined;
+      const end = endDate ? new Date(endDate as string) : undefined;
+      const limitNum = limit ? parseInt(limit as string) : 10;
+
+      const products = await this.statisticsService.getTopProductsByRevenue(
+        limitNum,
+        start,
+        end,
+      );
+      res
+        .status(200)
+        .json(ApiResponse.success('Top sản phẩm theo doanh thu', products));
+    } catch (error) {
+      res
+        .status(500)
+        .json(
+          ApiResponse.serverError(
+            error instanceof Error ? error.message : 'Lỗi server',
+          ),
+        );
+    }
+  };
+
+  // Top sản phẩm theo lượt xem
+  getTopProductsByViews = async (
+    req: Request,
+    res: Response,
+  ): Promise<void> => {
+    try {
+      const { limit, startDate, endDate } = req.query;
+      const start = startDate ? new Date(startDate as string) : undefined;
+      const end = endDate ? new Date(endDate as string) : undefined;
+      const limitNum = limit ? parseInt(limit as string) : 10;
+
+      const products = await this.statisticsService.getTopProductsByViews(
+        limitNum,
+        start,
+        end,
+      );
+      res
+        .status(200)
+        .json(ApiResponse.success('Top sản phẩm theo lượt xem', products));
+    } catch (error) {
+      res
+        .status(500)
+        .json(
+          ApiResponse.serverError(
+            error instanceof Error ? error.message : 'Lỗi server',
+          ),
+        );
+    }
+  };
+
+  // Doanh thu theo giờ
+  getRevenueHourlySeries = async (
+    req: Request,
+    res: Response,
+  ): Promise<void> => {
+    try {
+      const { startDate, endDate } = req.query;
+      const start = startDate ? new Date(startDate as string) : undefined;
+      const end = endDate ? new Date(endDate as string) : undefined;
+
+      const series = await this.statisticsService.getRevenueHourlySeries(
+        start,
+        end,
+      );
+      res.status(200).json(ApiResponse.success('Doanh thu theo giờ', series));
+    } catch (error) {
+      res
+        .status(500)
+        .json(
+          ApiResponse.serverError(
+            error instanceof Error ? error.message : 'Lỗi server',
+          ),
+        );
+    }
+  };
+
+  // So sánh doanh thu
+  getRevenueComparison = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { date } = req.query;
+      const compareDate = date ? new Date(date as string) : new Date(); // Mặc định hôm nay
+
+      const comparison = await this.statisticsService.getRevenueComparison(
+        compareDate,
+      );
+      res
+        .status(200)
+        .json(ApiResponse.success('So sánh doanh thu', comparison));
+    } catch (error) {
+      res
+        .status(500)
+        .json(
+          ApiResponse.serverError(
+            error instanceof Error ? error.message : 'Lỗi server',
+          ),
+        );
+    }
+  };
+
+  // Profit time series
+  getProfitTimeSeries = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { period, startDate, endDate } = req.query;
+      const start = startDate ? new Date(startDate as string) : undefined;
+      const end = endDate ? new Date(endDate as string) : undefined;
+
+      if (
+        period &&
+        !['day', 'week', 'month', 'year', 'hour'].includes(period as string)
+      ) {
+        res
+          .status(400)
+          .json(
+            ApiResponse.error(
+              'Period phải là: day, week, month, year hoặc hour',
+            ),
+          );
+        return;
+      }
+
+      const timeSeries = await this.statisticsService.getProfitTimeSeries(
+        (period as 'day' | 'week' | 'month' | 'year' | 'hour') || 'day',
+        start,
+        end,
+      );
+      res
+        .status(200)
+        .json(ApiResponse.success('Profit theo thời gian', timeSeries));
+    } catch (error) {
+      res
+        .status(500)
+        .json(
+          ApiResponse.serverError(
+            error instanceof Error ? error.message : 'Lỗi server',
+          ),
+        );
+    }
+  };
 }

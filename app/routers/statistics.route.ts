@@ -28,6 +28,37 @@ router.get(
   adminOnly,
   statisticsController.getProductStatistics,
 );
+router.get(
+  '/products/sales-detail',
+  adminOnly,
+  statisticsController.getProductSalesDetail,
+);
+router.get(
+  '/products/top-by-revenue',
+  adminOnly,
+  statisticsController.getTopProductsByRevenue,
+);
+router.get(
+  '/products/top-by-views',
+  adminOnly,
+  statisticsController.getTopProductsByViews,
+);
+router.get(
+  '/revenue/hourly',
+  adminOnly,
+  statisticsController.getRevenueHourlySeries,
+);
+router.get(
+  '/revenue/comparison',
+  adminOnly,
+  statisticsController.getRevenueComparison,
+);
+router.get(
+  '/profit/time-series',
+  adminOnly,
+  statisticsController.getProfitTimeSeries,
+);
+
 router.get('/orders', adminOnly, statisticsController.getOrderStatistics);
 
 export default router;
