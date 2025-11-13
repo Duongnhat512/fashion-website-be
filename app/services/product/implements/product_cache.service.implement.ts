@@ -3,8 +3,10 @@ import { ProductResponseDto } from '../../../dtos/response/product/product.respo
 import { ProductRepository } from '../../../repositories/product.repository';
 import { IProductCacheService } from '../product_cache.service.interface';
 import { normalizeText } from '../../../utils/product.util';
+import { VariantService } from './variant.service.implement';
 
 export class ProductCacheService implements IProductCacheService {
+  private readonly variantService = new VariantService();
   private readonly indexName = 'idx:products';
   private readonly PRODUCT_PREFIX = 'product:';
   private readonly productRepository = new ProductRepository();
@@ -146,30 +148,23 @@ export class ProductCacheService implements IProductCacheService {
     const searchTerms: string[] = [];
 
     for (const variant of variants) {
-      // Thêm tên màu (color.name hoặc color nếu là string)
       if (variant.color) {
-        // Nếu color là object
         if (typeof variant.color === 'object' && variant.color.name) {
           searchTerms.push(normalizeText(variant.color.name));
-        }
-        // Nếu color là string
-        else if (typeof variant.color === 'string') {
+        } else if (typeof variant.color === 'string') {
           searchTerms.push(normalizeText(variant.color));
         }
       }
 
-      // Thêm size
       if (variant.size) {
         searchTerms.push(normalizeText(variant.size));
       }
 
-      // Thêm SKU nếu cần search theo SKU
       if (variant.sku) {
         searchTerms.push(normalizeText(variant.sku));
       }
     }
 
-    // Loại bỏ duplicate và join lại
     return [...new Set(searchTerms)].join(' ');
   }
 
@@ -178,6 +173,15 @@ export class ProductCacheService implements IProductCacheService {
    */
   async indexProduct(product: ProductResponseDto): Promise<void> {
     try {
+      const variants = await Promise.all(
+        product.variants.map(async (variant) => {
+          return {
+            ...variant,
+            stock: await this.variantService.getVariantStock(variant.id),
+          };
+        }),
+      );
+
       const productData = {
         id: product.id,
         name: product.name,
@@ -192,9 +196,9 @@ export class ProductCacheService implements IProductCacheService {
         ratingCount: product.ratingCount,
         createdAt: product.createdAt.getTime(),
         updatedAt: product.updatedAt.getTime(),
-        minPrice: this.getMinPrice(product.variants || []),
-        maxPrice: this.getMaxPrice(product.variants || []),
-        variants: JSON.stringify(product.variants || []),
+        minPrice: this.getMinPrice(variants || []),
+        maxPrice: this.getMaxPrice(variants || []),
+        variants: JSON.stringify(variants || []),
         nameNormalized: normalizeText(product.name),
         shortDescriptionNormalized: normalizeText(product.shortDescription),
         brandNormalized: normalizeText(product.brand || ''),

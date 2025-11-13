@@ -17,7 +17,7 @@ export class VariantRepository {
     this.inventoryRepository = new InventoryRepository();
   }
 
-  private async calculateStock(variantId: string): Promise<number> {
+  async calculateStock(variantId: string): Promise<number> {
     const inventories = await this.inventoryRepository.getInventoryByVariantId(
       variantId,
     );

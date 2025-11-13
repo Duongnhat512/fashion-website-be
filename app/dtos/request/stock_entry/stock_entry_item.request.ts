@@ -17,7 +17,6 @@ export class InventoryRequestDto {
 
 export class StockImportItemRequestDto {
   @IsString()
-  @IsUUID()
   @IsNotEmpty()
   variantId!: string;
 

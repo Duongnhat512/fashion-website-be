@@ -38,4 +38,8 @@ export class VariantService implements IVariantService {
   ): Promise<PaginatedVariantsResponseDto> {
     return this.variantRepository.findAll(page, limit);
   }
+
+  async getVariantStock(variantId: string): Promise<number> {
+    return await this.variantRepository.calculateStock(variantId);
+  }
 }

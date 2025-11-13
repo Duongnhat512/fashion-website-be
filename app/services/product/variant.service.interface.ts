@@ -13,4 +13,5 @@ export interface IVariantService {
     page: number,
     limit: number,
   ): Promise<PaginatedVariantsResponseDto>;
+  getVariantStock(variantId: string): Promise<number>;
 }

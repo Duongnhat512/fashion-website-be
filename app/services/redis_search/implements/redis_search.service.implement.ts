@@ -21,7 +21,12 @@ export class RedisSearchService implements IRedisSearchService {
 
     const searchField = 'searchContent';
 
-    const wordQueries = words.map((word) => `@${searchField}:(${word}*)`);
+    const wordQueries = words
+      .map((word) => word.replace(/[^a-z0-9]/g, ''))
+      .filter(Boolean)
+      .map((word) => `@${searchField}:(${word}*)`);
+
+    if (wordQueries.length === 0) return '*';
 
     return wordQueries.join(' ');
   }
