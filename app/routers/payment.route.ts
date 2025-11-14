@@ -10,6 +10,6 @@ router.post(
   authenticatedUser,
   paymentController.createPaymentUrl,
 );
-router.get('/payment-redirect', paymentController.handleVNPayRedirect);
+router.get('/vnpay-redirect', paymentController.handleVNPayRedirect);
 
 export default router;

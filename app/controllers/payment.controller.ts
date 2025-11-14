@@ -36,6 +36,13 @@ export class PaymentController {
         return;
       }
 
+      if (order.isCOD) {
+        res
+          .status(400)
+          .json(ApiResponse.error('Đơn hàng không hỗ trợ thanh toán online'));
+        return;
+      }
+
       if (order.status !== OrderStatus.UNPAID) {
         res
           .status(400)
@@ -125,6 +132,11 @@ export class PaymentController {
       const result = await vnpayService.handleVNPayRedirect(req.query as any);
 
       if (result.success) {
+        await this.orderService.updateOrderStatus(
+          result.response.vnp_TxnRef,
+          OrderStatus.PENDING,
+        );
+
         // Redirect to success page with order info
         const successUrl = `${
           process.env.FRONTEND_URL || 'http://localhost:3000'

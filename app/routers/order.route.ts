@@ -1,16 +1,31 @@
 import { RequestHandler, Router } from 'express';
 import { OrderController } from '../controllers/order.controller';
+import { InvoiceController } from '../controllers/invoice.controller';
 import { adminOnly, authenticatedUser } from '../middlewares/auth.middleware';
 import { checkOrderOwnership } from '../middlewares/order.middleware';
 
 const router = Router();
 const orderController = new OrderController();
+const invoiceController = new InvoiceController();
 
 router.post('/', authenticatedUser, orderController.createOrder);
 router.put('/', adminOnly, orderController.updateOrder);
 router.post('/delete/:id', adminOnly, orderController.deleteOrder);
-router.get('/:id', authenticatedUser, orderController.getOrderById);
 router.get('/', adminOnly, orderController.getAllOrders);
+// Invoice routes - must be before /:id route to avoid conflicts
+router.get(
+  '/:id/invoice',
+  authenticatedUser,
+  checkOrderOwnership as RequestHandler,
+  invoiceController.generateInvoice,
+);
+router.get(
+  '/:id/invoice/download',
+  authenticatedUser,
+  checkOrderOwnership as RequestHandler,
+  invoiceController.downloadInvoice,
+);
+router.get('/:id', authenticatedUser, orderController.getOrderById);
 router.post(
   '/cancel/:id',
   authenticatedUser,
