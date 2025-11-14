@@ -36,6 +36,13 @@ router.post(
   checkOrderOwnership as RequestHandler,
   orderController.confirmOrderAsCompleted,
 );
+
+router.post(
+  '/mark-as-shipping/:id',
+  adminOnly,
+  orderController.markOrderAsShipping,
+);
+
 router.get(
   '/user/:userId',
   authenticatedUser,

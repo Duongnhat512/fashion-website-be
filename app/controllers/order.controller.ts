@@ -202,6 +202,27 @@ export class OrderController {
     }
   };
 
+  markOrderAsShipping = async (req: Request, res: Response) => {
+    try {
+      const order = await this.orderService.updateOrderStatus(
+        req.params.id,
+        OrderStatus.SHIPPING,
+      );
+      res
+        .status(200)
+        .json(ApiResponse.success('Cập nhật đơn hàng đang giao', order));
+    } catch (error) {
+      res.status(500).json(
+        ApiResponse.error('Lỗi cập nhật đơn hàng', [
+          {
+            field: 'markOrderAsShipping',
+            message: 'Lỗi cập nhật đơn hàng',
+          },
+        ]),
+      );
+    }
+  };
+
   getOrdersByUserId = async (req: Request, res: Response) => {
     try {
       const orders = await this.orderService.getOrdersByUserId(req.params.userId);
