@@ -72,6 +72,11 @@ export class AuthService implements IAuthService {
         fullname: user.fullname,
         email: user.email,
         role: user.role,
+        dob: user.dob,
+        gender: user.gender,
+        phone: user.phone,
+        avt: user.avt,
+        refreshToken: user.refreshToken,
       },
     };
   }

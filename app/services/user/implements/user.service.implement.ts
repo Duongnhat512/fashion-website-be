@@ -70,10 +70,7 @@ export class UserService implements IUserService {
     }
 
     return {
-      id: user.id,
-      fullname: user.fullname,
-      email: user.email,
-      role: user.role,
+      ...user,
     };
   }
 
