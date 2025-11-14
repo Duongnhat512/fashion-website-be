@@ -140,4 +140,23 @@ export class StockEntryController {
         );
     }
   };
+
+  getAllStockEntries = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const result = await this.stockEntryService.findAll();
+      res
+        .status(200)
+        .json(
+          ApiResponse.success('Lấy tất cả phiếu nhập kho thành công', result),
+        );
+    } catch (error) {
+      res
+        .status(500)
+        .json(
+          ApiResponse.serverError(
+            error instanceof Error ? error.message : 'Internal server error',
+          ),
+        );
+    }
+  };
 }

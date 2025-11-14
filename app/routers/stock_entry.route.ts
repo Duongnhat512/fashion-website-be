@@ -10,5 +10,6 @@ router.post('/:id/submit', adminOnly, stockEntryController.submitStockEntry);
 router.post('/:id/cancel', adminOnly, stockEntryController.cancelStockEntry);
 router.get('/filter', adminOnly, stockEntryController.filterStockEntry);
 router.put('/:id', adminOnly, stockEntryController.updateStockEntry);
+router.get('/', adminOnly, stockEntryController.getAllStockEntries);
 
 export default router;
