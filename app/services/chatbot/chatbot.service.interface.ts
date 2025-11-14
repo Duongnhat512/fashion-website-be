@@ -11,6 +11,7 @@ export interface ChatbotResponse {
   products?: ProductResponseDto[];
   suggestions?: string[];
   requiresAction?: 'add_to_cart' | 'create_order' | null;
+  sessionId?: string;
 }
 
 export interface IChatbotService {

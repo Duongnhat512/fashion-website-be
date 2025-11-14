@@ -15,9 +15,8 @@ export class OrderRepository {
   }
 
   async createOrder(order: CreateOrderRequestDto): Promise<OrderResponseDto> {
-    const created = await this.orderRepository.save({
-      ...order,
-    });
+    const orderEntity = this.orderRepository.create(order);
+    const created = await this.orderRepository.save(orderEntity);
 
     return this.getOrderById(created.id);
   }

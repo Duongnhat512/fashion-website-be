@@ -291,6 +291,7 @@ export class ChatbotService implements IChatbotService {
           message: finalResponse.text(),
           products: this.formatProductsForResponse(products),
           requiresAction,
+          sessionId: request.userId,
         };
       } else {
         // No function calling, return direct response
@@ -307,6 +308,7 @@ export class ChatbotService implements IChatbotService {
             products.length > 0
               ? this.formatProductsForResponse(products)
               : undefined,
+          sessionId: request.userId,
         };
       }
     } catch (error) {
@@ -314,6 +316,7 @@ export class ChatbotService implements IChatbotService {
       return {
         message:
           'Xin lỗi, tôi gặp lỗi khi xử lý yêu cầu của bạn. Vui lòng thử lại sau.',
+        sessionId: request.userId,
       };
     }
   }
