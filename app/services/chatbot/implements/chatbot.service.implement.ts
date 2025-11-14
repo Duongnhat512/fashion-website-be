@@ -17,6 +17,8 @@ import { OrderService } from '../../order/implements/order.service.implement';
 import { ProductResponseDto } from '../../../dtos/response/product/product.response';
 import redis from '../../../config/redis.config';
 import InventoryRepository from '../../../repositories/inventory.repository';
+import { IVariantService } from '../../product/variant.service.interface';
+import { VariantService } from '../../product/implements/variant.service.implement';
 
 export class ChatbotService implements IChatbotService {
   private genAI: GoogleGenerativeAI;
@@ -28,6 +30,7 @@ export class ChatbotService implements IChatbotService {
   private cartService: CartService;
   private orderService: OrderService;
   private inventoryRepository: InventoryRepository;
+  private variantService: IVariantService;
 
   constructor() {
     this.genAI = new GoogleGenerativeAI(config.gemini.apiKey);
@@ -38,6 +41,7 @@ export class ChatbotService implements IChatbotService {
     this.cartService = new CartService();
     this.orderService = new OrderService();
     this.inventoryRepository = new InventoryRepository();
+    this.variantService = new VariantService();
 
     // Initialize Gemini model with function calling
     this.model = this.genAI.getGenerativeModel({
@@ -541,19 +545,30 @@ export class ChatbotService implements IChatbotService {
         };
       }
 
-      // Convert cart items to order items
-      const orderItems = cart.cartItems.map((item: any) => ({
-        product: item.product,
-        variant: item.variant,
-        quantity: item.quantity,
-        rate: item.variant.price,
-      }));
+      // Convert cart items to order items - fetch variants from DB
+      const orderItems = await Promise.all(
+        cart.cartItems.map(async (item: any) => {
+          // Fetch variant from database to get current price
+          const variant = await this.variantService.getVariantById(
+            item.variant.id,
+          );
+          const rate = variant?.discountPrice || variant?.price!;
+
+          return {
+            product: item.product,
+            variant: variant,
+            quantity: item.quantity,
+            rate: rate,
+            amount: item.quantity * rate,
+          };
+        }),
+      );
 
       // Create order
       const order = await this.orderService.createOrder({
         user: { id: userId } as any,
         status: 'UNPAID' as any,
-        items: orderItems,
+        items: orderItems as any,
         shippingAddress: {
           fullName,
           phone,

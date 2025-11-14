@@ -13,12 +13,16 @@ import { Product } from '../models/product.model';
 import { CreateOrderShippingAddressRequestDto } from '../dtos/request/order/order_shipping_address.request';
 import { CreateOrderItemRequestDto } from '../dtos/request/order/order_item.request';
 import OrderStatus from '../models/enum/order_status.enum';
+import { IVariantService } from '../services/product/variant.service.interface';
+import { VariantService } from '../services/product/implements/variant.service.implement';
 
 export class OrderController {
   private readonly orderService: OrderService;
+  private readonly variantService: IVariantService;
 
   constructor() {
     this.orderService = new OrderService();
+    this.variantService = new VariantService();
   }
 
   createOrder = async (req: Request, res: Response) => {
@@ -40,18 +44,23 @@ export class OrderController {
       }
 
       if (req.body.items && req.body.items.length > 0) {
-        createOrderDto.items = req.body.items.map(
-          (item: CreateOrderItemRequestDto) => {
+        createOrderDto.items = await Promise.all(
+          req.body.items.map(async (item: CreateOrderItemRequestDto) => {
+            const variant = await this.variantService.getVariantById(
+              item.variant.id,
+            );
+            const rate = variant?.discountPrice || variant?.price!;
+
             const itemDto = new CreateOrderItemRequestDto();
             Object.assign(itemDto, {
               quantity: item.quantity,
-              rate: item.rate,
+              rate: rate,
               product: { id: item.product.id } as Product,
-              variant: { id: item.variant.id } as Variant,
-              amount: item.quantity * item.rate,
+              variant: variant,
+              amount: item.quantity * rate,
             });
             return itemDto;
-          },
+          }),
         );
       }
 
@@ -204,7 +213,9 @@ export class OrderController {
 
   getOrdersByUserId = async (req: Request, res: Response) => {
     try {
-      const orders = await this.orderService.getOrdersByUserId(req.params.userId);
+      const orders = await this.orderService.getOrdersByUserId(
+        req.params.userId,
+      );
       res.status(200).json(ApiResponse.success('Danh sách đơn hàng', orders));
     } catch (error) {
       res.status(500).json(ApiResponse.error('Internal server error'));
