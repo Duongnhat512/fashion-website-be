@@ -229,4 +229,21 @@ export class UserController {
         );
     }
   };
+
+  getAllUsers = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const result = await this.userService.getAllUsers();
+      res
+        .status(200)
+        .json(ApiResponse.success('Lấy tất cả người dùng thành công', result));
+    } catch (error) {
+      res
+        .status(500)
+        .json(
+          ApiResponse.serverError(
+            error instanceof Error ? error.message : 'Lỗi server',
+          ),
+        );
+    }
+  };
 }

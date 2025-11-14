@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { UserController } from '../controllers/user.controller';
 import { uploadSingle } from '../middlewares/upload.middleware';
-import { authenticatedUser } from '../middlewares/auth.middleware';
+import { adminOnly, authenticatedUser } from '../middlewares/auth.middleware';
 
 const router = Router();
 const userController = new UserController();
@@ -26,5 +26,6 @@ router.post('/verify-reset-otp', (req, res) =>
 router.put('/update-avt', authenticatedUser, uploadSingle, (req, res) =>
   userController.updateAvt(req, res),
 );
+router.get('/', adminOnly, (req, res) => userController.getAllUsers(req, res));
 
 export default router;
