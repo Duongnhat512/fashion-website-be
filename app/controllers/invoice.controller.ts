@@ -2,9 +2,10 @@ import { Request, Response } from 'express';
 import { InvoiceService } from '../services/invoice/implements/invoice.service.implement';
 import { OrderService } from '../services/order/implements/order.service.implement';
 import { ApiResponse } from '../dtos/response/api.response.dto';
+import { IInvoiceService } from '../services/invoice/invoice.service.interface';
 
 export class InvoiceController {
-  private readonly invoiceService: InvoiceService;
+  private readonly invoiceService: IInvoiceService;
   private readonly orderService: OrderService;
 
   constructor() {
@@ -83,6 +84,104 @@ export class InvoiceController {
       res.setHeader(
         'Content-Disposition',
         `attachment; filename="hoa-don-${order.id}.pdf"`,
+      );
+
+      pdfStream.pipe(res);
+    } catch (error) {
+      res.status(500).json(ApiResponse.error((error as Error).message));
+    }
+  };
+
+  generateBatchInvoices = async (req: Request, res: Response) => {
+    try {
+      const { orderIds } = req.body;
+
+      if (!orderIds || !Array.isArray(orderIds) || orderIds.length === 0) {
+        return res
+          .status(400)
+          .json(ApiResponse.error('Vui lòng cung cấp danh sách mã đơn hàng'));
+      }
+
+      const orders = await Promise.all(
+        orderIds.map((id: string) => this.orderService.getOrderById(id)),
+      );
+
+      const validOrders = orders.filter(
+        (order) =>
+          order &&
+          (order.status === 'delivered' ||
+            order.status === 'completed' ||
+            order.status === 'shipping' ||
+            order.status === 'pending'),
+      );
+
+      if (validOrders.length === 0) {
+        return res
+          .status(400)
+          .json(
+            ApiResponse.error(
+              'Không có đơn hàng hợp lệ để tạo hóa đơn. Vui lòng kiểm tra lại trạng thái đơn hàng.',
+            ),
+          );
+      }
+
+      const pdfBuffer = await this.invoiceService.generateBatchInvoicesPDF(
+        validOrders,
+      );
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="hoa-don-hang-loat-${Date.now()}.pdf"`,
+      );
+      res.setHeader('Content-Length', pdfBuffer.length);
+
+      res.send(pdfBuffer);
+    } catch (error) {
+      res.status(500).json(ApiResponse.error((error as Error).message));
+    }
+  };
+
+  downloadBatchInvoices = async (req: Request, res: Response) => {
+    try {
+      const { orderIds } = req.body;
+
+      if (!orderIds || !Array.isArray(orderIds) || orderIds.length === 0) {
+        return res
+          .status(400)
+          .json(ApiResponse.error('Vui lòng cung cấp danh sách mã đơn hàng'));
+      }
+
+      const orders = await Promise.all(
+        orderIds.map((id: string) => this.orderService.getOrderById(id)),
+      );
+
+      const validOrders = orders.filter(
+        (order) =>
+          order &&
+          (order.status === 'delivered' ||
+            order.status === 'completed' ||
+            order.status === 'shipping' ||
+            order.status === 'pending'),
+      );
+
+      if (validOrders.length === 0) {
+        return res
+          .status(400)
+          .json(
+            ApiResponse.error(
+              'Không có đơn hàng hợp lệ để tạo hóa đơn. Vui lòng kiểm tra lại trạng thái đơn hàng.',
+            ),
+          );
+      }
+
+      const pdfStream =
+        this.invoiceService.generateBatchInvoicesPDFStream(validOrders);
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="hoa-don-hang-loat-${Date.now()}.pdf"`,
       );
 
       pdfStream.pipe(res);

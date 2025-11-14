@@ -12,19 +12,7 @@ router.post('/', authenticatedUser, orderController.createOrder);
 router.put('/', adminOnly, orderController.updateOrder);
 router.post('/delete/:id', adminOnly, orderController.deleteOrder);
 router.get('/', adminOnly, orderController.getAllOrders);
-// Invoice routes - must be before /:id route to avoid conflicts
-router.get(
-  '/:id/invoice',
-  authenticatedUser,
-  checkOrderOwnership as RequestHandler,
-  invoiceController.generateInvoice,
-);
-router.get(
-  '/:id/invoice/download',
-  authenticatedUser,
-  checkOrderOwnership as RequestHandler,
-  invoiceController.downloadInvoice,
-);
+
 router.get('/:id', authenticatedUser, orderController.getOrderById);
 router.post(
   '/cancel/:id',
@@ -52,6 +40,30 @@ router.get(
   '/user/:userId',
   authenticatedUser,
   orderController.getOrdersByUserId,
+);
+
+router.get(
+  '/:id/invoice',
+  authenticatedUser,
+  checkOrderOwnership as RequestHandler,
+  invoiceController.generateInvoice,
+);
+router.get(
+  '/:id/invoice/download',
+  authenticatedUser,
+  checkOrderOwnership as RequestHandler,
+  invoiceController.downloadInvoice,
+);
+router.get(
+  '/invoices/batch',
+  authenticatedUser,
+  invoiceController.generateBatchInvoices,
+);
+
+router.get(
+  '/invoices/batch/download',
+  authenticatedUser,
+  invoiceController.downloadBatchInvoices,
 );
 
 export default router;

@@ -52,11 +52,63 @@ export class InvoiceService implements IInvoiceService {
     return stream;
   }
 
+  async generateBatchInvoicesPDF(orders: OrderResponseDto[]): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      const doc = new PDFDocument({
+        margins: { top: 50, bottom: 0, left: 50, right: 50 },
+        size: 'A4',
+      });
+
+      doc.registerFont('Roboto', FONT_REGULAR_PATH);
+      doc.registerFont('Roboto-Bold', FONT_BOLD_PATH);
+
+      const chunks: Buffer[] = [];
+
+      doc.on('data', (chunk) => chunks.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+
+      orders.forEach((order, index) => {
+        if (index > 0) {
+          doc.addPage();
+        }
+        this.generateInvoiceContent(doc, order);
+      });
+
+      doc.end();
+    });
+  }
+
+  generateBatchInvoicesPDFStream(
+    orders: OrderResponseDto[],
+  ): NodeJS.ReadableStream {
+    const doc = new PDFDocument({
+      margins: { top: 50, bottom: 0, left: 50, right: 50 },
+      size: 'A4',
+    });
+    const stream = new PassThrough();
+
+    doc.registerFont('Roboto', FONT_REGULAR_PATH);
+    doc.registerFont('Roboto-Bold', FONT_BOLD_PATH);
+
+    doc.pipe(stream);
+
+    orders.forEach((order, index) => {
+      if (index > 0) {
+        doc.addPage();
+      }
+      this.generateInvoiceContent(doc, order);
+    });
+
+    doc.end();
+
+    return stream;
+  }
+
   private generateInvoiceContent(
     doc: typeof PDFDocument,
     order: OrderResponseDto,
   ): void {
-    // Header
     doc
       .fontSize(24)
       .font('Roboto-Bold')
@@ -73,7 +125,6 @@ export class InvoiceService implements IInvoiceService {
       })
       .moveDown(1);
 
-    // Invoice Info
     doc
       .fontSize(12)
       .font('Roboto-Bold')
@@ -82,7 +133,6 @@ export class InvoiceService implements IInvoiceService {
       .text(`Ngày tạo: ${this.formatDate(order.createdAt)}`, { align: 'right' })
       .moveDown(0.5);
 
-    // Customer Info
     doc
       .fontSize(14)
       .font('Roboto-Bold')
@@ -97,7 +147,6 @@ export class InvoiceService implements IInvoiceService {
       .text(`Số điện thoại: ${order.user.phone || 'N/A'}`)
       .moveDown(0.5);
 
-    // Shipping Address
     if (order.shippingAddress) {
       doc
         .fontSize(14)
@@ -117,14 +166,12 @@ export class InvoiceService implements IInvoiceService {
         .moveDown(0.5);
     }
 
-    // Order Items Table
     doc
       .fontSize(14)
       .font('Roboto-Bold')
       .text('Chi tiết đơn hàng', { underline: true })
       .moveDown(0.5);
 
-    // Table Header
     const tableTop = doc.y;
     const itemHeight = 30;
     const tableLeft = 50;
@@ -148,7 +195,6 @@ export class InvoiceService implements IInvoiceService {
         align: 'right',
       });
 
-    // Table Rows
     let yPosition = tableTop + 20;
     order.items.forEach((item, index) => {
       const productName = item.product?.name || 'N/A';
@@ -188,7 +234,6 @@ export class InvoiceService implements IInvoiceService {
       yPosition += itemHeight;
     });
 
-    // Summary Section
     const summaryY = yPosition + 10;
     doc
       .fontSize(11)
@@ -259,7 +304,6 @@ export class InvoiceService implements IInvoiceService {
     const pageHeight = doc.page.height;
     const pageWidth = doc.page.width;
 
-    // Payment Method
     doc
       .moveDown(1)
       .fontSize(11)
@@ -277,7 +321,6 @@ export class InvoiceService implements IInvoiceService {
         width: pageWidth - 100,
       });
 
-    // Footer
     const currentY = doc.y;
     const marginBottom = 50;
 
