@@ -42,6 +42,9 @@ export class InvoiceService implements IInvoiceService {
     });
     const stream = new PassThrough();
 
+    doc.registerFont('Roboto', FONT_REGULAR_PATH);
+    doc.registerFont('Roboto-Bold', FONT_BOLD_PATH);
+
     doc.pipe(stream);
     this.generateInvoiceContent(doc, order);
     doc.end();
@@ -255,6 +258,7 @@ export class InvoiceService implements IInvoiceService {
 
     const pageHeight = doc.page.height;
     const pageWidth = doc.page.width;
+
     // Payment Method
     doc
       .moveDown(1)
@@ -284,14 +288,14 @@ export class InvoiceService implements IInvoiceService {
       .font('Roboto')
       .text(
         'Cảm ơn quý khách đã tin tưởng và sử dụng dịch vụ của chúng tôi!',
-        50,
+        150,
         footerY,
         {
           width: pageWidth - 100,
           align: 'center',
         },
       )
-      .text('Hóa đơn này được tạo tự động bởi hệ thống.', 50, footerY + 15, {
+      .text('Hóa đơn này được tạo tự động bởi hệ thống.', 150, footerY + 15, {
         width: pageWidth - 100,
         align: 'center',
       });

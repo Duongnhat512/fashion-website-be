@@ -67,14 +67,13 @@ export class InvoiceController {
       if (
         order.status !== 'delivered' &&
         order.status !== 'completed' &&
-        order.status !== 'shipping'
+        order.status !== 'shipping' &&
+        order.status !== 'pending'
       ) {
         return res
           .status(400)
           .json(
-            ApiResponse.error(
-              'Chỉ có thể xuất hóa đơn cho đơn hàng đã được giao hoặc hoàn thành',
-            ),
+            ApiResponse.error('Trạng thái hóa đơn không hợp lệ để tạo hóa đơn'),
           );
       }
 
