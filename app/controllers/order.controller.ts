@@ -192,7 +192,7 @@ export class OrderController {
     try {
       const order = await this.orderService.updateOrderStatus(
         req.params.id,
-        OrderStatus.DELIVERED,
+        OrderStatus.COMPLETED,
       );
       res
         .status(200)
