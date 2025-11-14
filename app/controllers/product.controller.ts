@@ -83,7 +83,6 @@ export class ProductController {
     try {
       const files = (req.files as Express.Multer.File[]) || [];
 
-      // Parse productData - handle cả JSON string và object
       let productData: any;
       if (typeof req.body.productData === 'string') {
         try {
@@ -102,7 +101,6 @@ export class ProductController {
         productData = req.body;
       }
 
-      // 1. Handle product image - ưu tiên URL có sẵn
       let productImageUrl = productData.imageUrl || '';
       const productImageFile = files.find(
         (f) => f.fieldname === 'productImage',
@@ -117,7 +115,6 @@ export class ProductController {
         uploadedPublicIds.push(uploadResult.publicId);
       }
 
-      // Validate product image
       if (!productImageUrl) {
         if (uploadedPublicIds.length > 0) {
           await this.cloudinaryService.deleteMultipleImages(uploadedPublicIds);
@@ -132,7 +129,6 @@ export class ProductController {
         );
       }
 
-      // 2. Handle variant images
       const variants: any[] = [];
 
       if (productData.variants) {
@@ -143,7 +139,6 @@ export class ProductController {
         for (let i = 0; i < variantsArray.length; i++) {
           const variantData = variantsArray[i];
 
-          // Tìm file theo pattern: variants[0][image], variants[1][image], ...
           const variantImageFile = files.find(
             (f) =>
               f.fieldname === `variants[${i}][image]` ||
@@ -151,7 +146,6 @@ export class ProductController {
               f.fieldname === `variants[${i}].image`,
           );
 
-          // Ưu tiên URL có sẵn, nếu không thì upload file
           let variantImageUrl = variantData.imageUrl || '';
 
           if (variantImageFile) {
@@ -163,7 +157,6 @@ export class ProductController {
               variantImageUrl = uploadResult.url;
               uploadedPublicIds.push(uploadResult.publicId);
             } catch (uploadError) {
-              // Nếu upload variant image fail, rollback tất cả
               if (uploadedPublicIds.length > 0) {
                 await this.cloudinaryService.deleteMultipleImages(
                   uploadedPublicIds,
@@ -173,7 +166,6 @@ export class ProductController {
             }
           }
 
-          // Validate variant image
           if (!variantImageUrl) {
             if (uploadedPublicIds.length > 0) {
               await this.cloudinaryService.deleteMultipleImages(
@@ -197,7 +189,6 @@ export class ProductController {
         }
       }
 
-      // 3. Create ProductDto
       const createProductDto = new ProductRequestDto();
       Object.assign(createProductDto, productData);
       createProductDto.imageUrl = productImageUrl;
@@ -218,14 +209,12 @@ export class ProductController {
 
       createProductDto.category = { id: productData.category.id } as Category;
 
-      // 4. Map variants to DTOs
       if (variants.length > 0) {
         createProductDto.variants = variants.map((variant: any) => {
           const variantDto = new VariantRequestDto();
           Object.assign(variantDto, variant);
           variantDto.color = { id: variant.color?.id } as Color;
 
-          // Convert numbers - chỉ convert khi chưa phải number
           variantDto.price =
             typeof variant.price === 'number'
               ? variant.price
@@ -240,7 +229,6 @@ export class ProductController {
               : Number(variant.discountPercent)
             : 0;
 
-          // Set defaults cho optional fields
           variantDto.onSales = variant.onSales ?? false;
           variantDto.saleNote = variant.saleNote || '';
 
@@ -248,10 +236,8 @@ export class ProductController {
         });
       }
 
-      // 5. Validate DTO
       const errors = await validate(createProductDto);
       if (errors.length > 0) {
-        // Rollback uploaded images
         if (uploadedPublicIds.length > 0) {
           await this.cloudinaryService.deleteMultipleImages(uploadedPublicIds);
         }
@@ -266,11 +252,9 @@ export class ProductController {
           .json(ApiResponse.validationError(validationErrors));
       }
 
-      // 6. Create product
       const product = await this.productService.createProduct(createProductDto);
       return res.status(200).json(ApiResponse.success('Tạo sản phẩm', product));
     } catch (error: any) {
-      // Rollback on error
       if (uploadedPublicIds.length > 0) {
         try {
           await this.cloudinaryService.deleteMultipleImages(uploadedPublicIds);
@@ -357,7 +341,6 @@ export class ProductController {
         );
       }
 
-      // Determine file type
       const fileExtension = file.originalname.split('.').pop()?.toLowerCase();
       let parseResult;
 
@@ -383,7 +366,6 @@ export class ProductController {
           );
       }
 
-      // Validate parsed data
       if (parseResult.errors.length > 0 && parseResult.successCount === 0) {
         return res.status(400).json(
           ApiResponse.error(
@@ -397,13 +379,11 @@ export class ProductController {
         );
       }
 
-      // Import products
       const importedProducts = [];
       const importErrors = [];
 
       for (const item of parseResult.data) {
         try {
-          // Validate product DTO
           const productErrors = await validate(item.product);
           if (productErrors.length > 0) {
             importErrors.push({
@@ -416,7 +396,6 @@ export class ProductController {
             continue;
           }
 
-          // Validate variants
           if (item.variants && item.variants.length > 0) {
             for (const variant of item.variants) {
               const variantErrors = await validate(variant);
@@ -433,7 +412,6 @@ export class ProductController {
             }
           }
 
-          // Create product
           const product = await this.productService.createProduct(item.product);
           importedProducts.push(product);
         } catch (error: any) {
@@ -444,7 +422,6 @@ export class ProductController {
         }
       }
 
-      // Return result
       res.status(200).json(
         ApiResponse.success('Import sản phẩm', {
           summary: {
@@ -475,7 +452,7 @@ export class ProductController {
   async importProductsOnly(req: Request, res: Response) {
     try {
       const files = (req.files as Express.Multer.File[]) || [];
-      const file = req.file || files[0]; // Lấy file đầu tiên hoặc từ req.file
+      const file = req.file || files[0];
 
       if (!file) {
         return res.status(400).json(
@@ -553,6 +530,7 @@ export class ProductController {
           const product = await this.productService.createProductWithId(
             productDto,
           );
+
           importedProducts.push(product);
         } catch (error: any) {
           importErrors.push({

@@ -46,7 +46,7 @@ export default class InventoryRepository {
   async createInventory(
     inventory: CreateInventoryRequestDto,
   ): Promise<Inventory> {
-    return this.inventoryRepository.create(inventory);
+    return this.inventoryRepository.save(inventory);
   }
 
   async getInventoryByWarehouseId(warehouseId: string): Promise<Inventory[]> {

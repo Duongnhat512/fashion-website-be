@@ -13,6 +13,7 @@ import { Color } from './color.model';
 import { Product } from './product.model';
 import { OrderItem } from './order_item.model';
 import CartItem from './cart_item.model';
+import { Inventory } from './inventory.model';
 
 @Entity({ name: 'variants' })
 export class Variant {
@@ -64,6 +65,11 @@ export class Variant {
 
   @OneToMany(() => CartItem, (cartItem) => cartItem.variant)
   cartItems?: CartItem[];
+
+  @OneToMany(() => Inventory, (inventory) => inventory.variant, {
+    cascade: true,
+  })
+  inventories?: Inventory[];
 
   @BeforeInsert()
   async generateCode() {

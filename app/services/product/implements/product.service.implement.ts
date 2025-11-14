@@ -12,16 +12,23 @@ import { RedisSearchService } from '../../../services/redis_search/implements/re
 import { IProductCacheService } from '../product_cache.service.interface';
 import { ProductCacheService } from './product_cache.service.implement';
 import { EmbeddingScheduler } from '../../../schedulers/embedding.scheduler';
+import { IWarehouseService } from '../../warehouse/warehouse.service.interface';
+import { WarehouseService } from '../../warehouse/implements/warehouse.service.implement';
+import InventoryRepository from '../../../repositories/inventory.repository';
 
 export class ProductService implements IProductService {
   private readonly productRepository: ProductRepository;
   private readonly redisSearchService: RedisSearchService;
   private readonly productCacheService: IProductCacheService;
+  private readonly warehouseService: IWarehouseService;
+  private readonly inventoryRepository: InventoryRepository;
 
   constructor() {
     this.productRepository = new ProductRepository();
     this.redisSearchService = new RedisSearchService();
     this.productCacheService = new ProductCacheService();
+    this.warehouseService = new WarehouseService();
+    this.inventoryRepository = new InventoryRepository();
   }
 
   async createProduct(product: ProductRequestDto): Promise<ProductResponseDto> {
@@ -31,6 +38,7 @@ export class ProductService implements IProductService {
       const productEntity = await this.productRepository.getProductEntityById(
         newProduct.id,
       );
+
       await this.productCacheService.indexProduct(productEntity);
 
       // Generate embedding for new product (async, don't wait)
@@ -40,6 +48,7 @@ export class ProductService implements IProductService {
         .catch((error) => {
           console.error('Error generating embedding for new product:', error);
         });
+      await this.createInventoriesForVariants(productEntity.variants);
     } catch (error) {
       console.error('Error indexing new product:', error);
     }
@@ -50,7 +59,22 @@ export class ProductService implements IProductService {
   async createProductWithId(
     product: ProductRequestDto,
   ): Promise<ProductResponseDto> {
-    return this.productRepository.createProductWithId(product);
+    const newProduct = await this.productRepository.createProductWithId(
+      product,
+    );
+
+    try {
+      const productEntity = await this.productRepository.getProductEntityById(
+        newProduct.id,
+      );
+
+      await this.productCacheService.indexProduct(productEntity);
+      await this.createInventoriesForVariants(productEntity.variants);
+    } catch (error) {
+      console.error('Error indexing new product:', error);
+    }
+
+    return newProduct;
   }
 
   async updateProduct(
@@ -168,5 +192,44 @@ export class ProductService implements IProductService {
 
   async getProductByName(name: string): Promise<ProductResponseDto | null> {
     return this.productRepository.getProductByName(name);
+  }
+
+  private async createInventoriesForVariants(variants: any[]): Promise<void> {
+    if (!variants || variants.length === 0) return;
+
+    const warehouses = await this.warehouseService.getAll();
+    const inventoryPromises = [];
+
+    for (const variant of variants) {
+      for (const warehouse of warehouses) {
+        inventoryPromises.push(
+          (async () => {
+            try {
+              const existing =
+                await this.inventoryRepository.getInventoryByVariantIdAndWarehouseId(
+                  variant.id,
+                  warehouse.id,
+                );
+
+              if (!existing) {
+                await this.inventoryRepository.createInventory({
+                  warehouse: warehouse,
+                  variant: variant,
+                  onHand: 0,
+                  reserved: 0,
+                });
+              }
+            } catch (error) {
+              console.error(
+                `Error creating inventory for variant ${variant.id} in warehouse ${warehouse.id}:`,
+                error,
+              );
+            }
+          })(),
+        );
+      }
+    }
+
+    await Promise.all(inventoryPromises);
   }
 }
