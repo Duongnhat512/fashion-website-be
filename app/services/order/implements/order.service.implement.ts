@@ -13,6 +13,8 @@ import { OrderItemRepository } from '../../../repositories/order_item.repository
 import CartItemRepository from '../../../repositories/cart_item.repository';
 import CartRepository from '../../../repositories/cart.repository';
 import CartItemRequestDto from '../../../dtos/request/cart/cart_item.request';
+import { IProductCacheService } from '../../product/product_cache.service.interface';
+import { ProductCacheService } from '../../product/implements/product_cache.service.implement';
 
 export class OrderService implements IOrderService {
   private readonly orderRepository: OrderRepository;
@@ -21,6 +23,7 @@ export class OrderService implements IOrderService {
   private readonly orderItemRepository: OrderItemRepository;
   private readonly cartRepository: CartRepository;
   private readonly cartItemRepository: CartItemRepository;
+  private readonly productCacheService: IProductCacheService;
 
   constructor() {
     this.orderRepository = new OrderRepository();
@@ -29,6 +32,7 @@ export class OrderService implements IOrderService {
     this.orderItemRepository = new OrderItemRepository();
     this.cartRepository = new CartRepository();
     this.cartItemRepository = new CartItemRepository();
+    this.productCacheService = new ProductCacheService();
   }
 
   async updateOrder(order: UpdateOrderRequestDto): Promise<OrderResponseDto> {
@@ -138,6 +142,19 @@ export class OrderService implements IOrderService {
           }
         }
 
+        const updatedProductIds = new Set<string>();
+        for (const item of order.items) {
+          if (item.product.id && !updatedProductIds.has(item.product.id)) {
+            const product = await this.productCacheService.getProduct(
+              item.product.id,
+            );
+            if (product) {
+              await this.productCacheService.indexProduct(product);
+              updatedProductIds.add(item.product.id);
+            }
+          }
+        }
+
         return createdOrder;
       });
     } catch (error) {
@@ -175,6 +192,19 @@ export class OrderService implements IOrderService {
 
         inv.reserved -= item.quantity;
         await this.inventoryRepository.updateInventory(inv);
+      }
+
+      const updatedProductIds = new Set<string>();
+
+      for (const item of items) {
+        if (updatedProductIds.has(item.product.id)) continue;
+        const product = await this.productCacheService.getProduct(
+          item.product.id,
+        );
+        if (product) {
+          await this.productCacheService.indexProduct(product);
+        }
+        updatedProductIds.add(item.product.id);
       }
 
       order.status = OrderStatus.CANCELLED;

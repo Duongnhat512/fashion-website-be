@@ -22,7 +22,7 @@ export class OrderItemRepository {
   async getOrderItemsByOrderId(orderId: string): Promise<OrderItem[]> {
     return this.orderItemRepository.find({
       where: { order: { id: orderId } },
-      relations: ['variant', 'warehouse'],
+      relations: ['variant', 'warehouse', 'product'],
     });
   }
 

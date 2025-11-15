@@ -17,16 +17,20 @@ import {
   InventoryRequestDto,
   StockImportItemRequestDto,
 } from '../../../dtos/request/stock_entry/stock_entry_item.request';
+import { IProductCacheService } from '../../product/product_cache.service.interface';
+import { ProductCacheService } from '../../product/implements/product_cache.service.implement';
 
 export class StockEntryServiceImplement implements IStockEntryService {
   private readonly stockEntryRepository: StockEntryRepository;
   private readonly dataSource: DataSource;
   private readonly inventoryRepository: InventoryRepository;
+  private readonly productCacheService: IProductCacheService;
 
   constructor() {
     this.stockEntryRepository = new StockEntryRepository();
     this.dataSource = AppDataSource;
     this.inventoryRepository = new InventoryRepository();
+    this.productCacheService = new ProductCacheService();
   }
 
   async filter(
@@ -265,7 +269,6 @@ export class StockEntryServiceImplement implements IStockEntryService {
       }
 
       inventory.onHand += item.quantity;
-
       await this.inventoryRepository.updateInventory(inventory);
     }
   }
