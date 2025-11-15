@@ -1,9 +1,10 @@
 import PromotionType from '../../../models/enum/promotional_type.enum';
 import PromotionStatus from '../../../models/enum/promotion.enum';
+import { Product } from '../../../models/product.model';
 
 export type PromotionResponseDto = {
   id: string;
-  productIds: string[];
+  products: Product[];
   categoryId?: string | null;
   categoryName?: string | null;
   type: PromotionType;

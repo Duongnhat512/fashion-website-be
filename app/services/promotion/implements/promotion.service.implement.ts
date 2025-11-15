@@ -120,13 +120,13 @@ export class PromotionService implements IPromotionService {
   async activate(id: string): Promise<void> {
     const p = await this.repo.getById(id);
 
-    await this.repo.deactivateAllForProducts(p.productIds);
+    await this.repo.deactivateAllForProducts(p.products.map((p) => p.id));
 
     await this.repo.update({ id, active: true });
 
     if (isEffectiveNow(p.startDate || null, p.endDate || null)) {
-      for (const productId of p.productIds) {
-        await this.applyToVariants(productId, p.type, p.value, p.note);
+      for (const product of p.products) {
+        await this.applyToVariants(product.id, p.type, p.value, p.note);
       }
     }
   }
@@ -134,8 +134,8 @@ export class PromotionService implements IPromotionService {
   async delete(id: string): Promise<string> {
     const existing = await this.repo.getById(id);
 
-    for (const productId of existing.productIds) {
-      await this.removeFromVariants(productId);
+    for (const product of existing.products) {
+      await this.removeFromVariants(product.id);
     }
 
     const deletedId = await this.repo.delete(id);
@@ -146,8 +146,8 @@ export class PromotionService implements IPromotionService {
     const p = await this.repo.getById(id);
     await this.repo.update({ id, active: false });
 
-    for (const productId of p.productIds) {
-      await this.removeFromVariants(productId);
+    for (const product of p.products) {
+      await this.removeFromVariants(product.id);
     }
   }
 

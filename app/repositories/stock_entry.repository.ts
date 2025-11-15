@@ -25,7 +25,11 @@ export default class StockEntryRepository {
 
   async findAll(): Promise<StockEntry[]> {
     return this.stockEntryRepository.find({
-      relations: ['stockEntryItems', 'stockEntryItems.inventory'],
+      relations: [
+        'stockEntryItems',
+        'stockEntryItems.inventory',
+        'stockEntryItems.inventory.variant',
+      ],
       order: { createdAt: 'DESC' },
     });
   }
@@ -33,7 +37,11 @@ export default class StockEntryRepository {
   async findById(id: string): Promise<StockEntry | null> {
     return this.stockEntryRepository.findOne({
       where: { id },
-      relations: ['stockEntryItems', 'stockEntryItems.inventory'],
+      relations: [
+        'stockEntryItems',
+        'stockEntryItems.inventory',
+        'stockEntryItems.inventory.variant',
+      ],
     });
   }
 

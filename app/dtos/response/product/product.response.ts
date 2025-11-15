@@ -8,7 +8,7 @@ export class ProductResponseDto {
   shortDescription: string;
   imageUrl: string;
   brand: string;
-  categoryId: string;
+  categoryId?: string;
   status: string;
   tags: string;
   ratingAverage: number;

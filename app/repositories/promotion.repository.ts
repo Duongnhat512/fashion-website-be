@@ -210,10 +210,7 @@ export class PromotionRepository {
 
   private toDto = (p: Promotion): PromotionResponseDto => ({
     id: p.id,
-    productIds:
-      p.promotionProducts
-        ?.filter((pp) => !!pp.product)
-        .map((pp) => pp.product.id) ?? [],
+    products: p.promotionProducts.map((pp) => pp.product),
     categoryId: p.category?.id || null,
     categoryName: p.category?.name || null,
     type: p.type,
