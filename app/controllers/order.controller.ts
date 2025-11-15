@@ -197,11 +197,30 @@ export class OrderController {
     }
   };
 
+  markOrderAsShipping = async (req: Request, res: Response) => {
+    try {
+      const order = await this.orderService.updateOrderStatus(
+        req.params.id,
+        OrderStatus.SHIPPING,
+      );
+      res.status(200).json(ApiResponse.success('Đã xác nhận đơn hàng', order));
+    } catch (error) {
+      res.status(500).json(
+        ApiResponse.error('Lỗi xác nhận đơn hàng', [
+          {
+            field: 'markOrderAsShipping',
+            message: 'Lỗi xác nhận đơn hàng',
+          },
+        ]),
+      );
+    }
+  };
+
   confirmOrderAsCompleted = async (req: Request, res: Response) => {
     try {
       const order = await this.orderService.updateOrderStatus(
         req.params.id,
-        OrderStatus.DELIVERED,
+        OrderStatus.COMPLETED,
       );
       res
         .status(200)

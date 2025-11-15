@@ -21,21 +21,27 @@ router.post(
   orderController.cancelOrder,
 );
 router.post(
-  '/mark-as-delivered',
+  '/mark-as-delivered/:id',
   adminOnly,
   orderController.markOrderAsDelivered,
 );
 router.post(
-  '/mark-as-ready-to-ship',
+  '/mark-as-ready-to-ship/:id',
   adminOnly,
   orderController.markOrderReadyToShip,
 );
 router.post(
-  '/confirm-as-completed',
+  '/confirm-as-completed/:id',
   authenticatedUser,
   checkOrderOwnership as RequestHandler,
   orderController.confirmOrderAsCompleted,
 );
+router.post(
+  '/mark-as-shipping/:id',
+  adminOnly,
+  orderController.markOrderAsShipping,
+);
+
 router.get(
   '/user/:userId',
   authenticatedUser,

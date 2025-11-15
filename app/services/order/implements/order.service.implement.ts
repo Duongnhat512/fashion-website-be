@@ -189,6 +189,13 @@ export class OrderService implements IOrderService {
     const order = await this.orderRepository.getOrderById(orderId);
     if (!order) throw new Error('Không tìm thấy đơn hàng');
 
+    const priority = this.getOrderStatusPriority(status);
+    const currentPriority = this.getOrderStatusPriority(order.status);
+
+    if (priority < currentPriority || priority - currentPriority != 1) {
+      throw new Error('Trạng thái đơn hiện tại không cho phép cập nhật');
+    }
+
     order.status = status;
     await this.orderRepository.updateOrder(order);
     return order;
@@ -196,5 +203,24 @@ export class OrderService implements IOrderService {
 
   async getOrdersByUserId(userId: string): Promise<OrderResponseDto[]> {
     return this.orderRepository.getOrdersByUserId(userId);
+  }
+
+  getOrderStatusPriority(status: OrderStatus): number {
+    switch (status) {
+      case OrderStatus.UNPAID:
+        return 0;
+      case OrderStatus.PENDING:
+        return 1;
+      case OrderStatus.READY_TO_SHIP:
+        return 2;
+      case OrderStatus.SHIPPING:
+        return 3;
+      case OrderStatus.DELIVERED:
+        return 4;
+      case OrderStatus.COMPLETED:
+        return 5;
+      default:
+        return 0;
+    }
   }
 }
