@@ -148,6 +148,7 @@ export class PromotionRepository {
       endDate: dto.endDate ? new Date(dto.endDate) : existing.endDate,
       active: dto.active ?? existing.active,
       note: dto.note ?? existing.note,
+      status: dto.status ?? existing.status,
     });
 
     const saved = await this.repo.save(existing);

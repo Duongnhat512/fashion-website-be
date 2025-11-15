@@ -28,4 +28,5 @@ export interface IProductService {
     limit?: number,
   ): Promise<PaginatedProductsResponseDto>;
   createProductWithId(product: ProductRequestDto): Promise<ProductResponseDto>;
+  searchProductsByProductId(productId: string): Promise<ProductResponseDto[]>;
 }

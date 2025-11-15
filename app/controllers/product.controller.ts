@@ -712,4 +712,10 @@ export class ProductController {
         );
     }
   }
+
+  async searchProductsByProductId(req: Request, res: Response) {
+    const { id } = req.params;
+    const products = await this.productService.searchProductsByProductId(id);
+    res.status(200).json(ApiResponse.success('Tìm kiếm sản phẩm', products));
+  }
 }

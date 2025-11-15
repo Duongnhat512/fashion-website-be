@@ -90,6 +90,10 @@ export class UpdatePromotionRequestDto {
   active?: boolean;
 
   @IsOptional()
+  @IsEnum(PromotionStatus)
+  status?: PromotionStatus;
+
+  @IsOptional()
   note?: string;
 
   @IsOptional()

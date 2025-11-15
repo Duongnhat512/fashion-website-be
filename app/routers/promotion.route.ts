@@ -13,6 +13,9 @@ router.get('/', adminOnly, (req, res) => controller.getPromotions(req, res));
 router.post('/:id/activate', adminOnly, (req, res) =>
   controller.activate(req, res),
 );
+router.post('/:id/submit', adminOnly, (req, res) =>
+  controller.submit(req, res),
+);
 router.post('/:id/deactivate', adminOnly, (req, res) =>
   controller.deactivate(req, res),
 );

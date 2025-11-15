@@ -109,33 +109,12 @@ export class PromotionService implements IPromotionService {
     if (promotion.status !== PromotionStatus.DRAFT) {
       throw new Error('Chỉ có thể submit promotion khi ở trạng thái DRAFT');
     }
+    promotion.status = PromotionStatus.SUBMITTED;
+    await this.repo.update({ id, status: PromotionStatus.SUBMITTED });
 
-    const shouldBeActive = this.calculateActiveStatus(
-      promotion.startDate || null,
-      promotion.endDate || null,
-    );
+    await this.activate(id);
 
-    if (shouldBeActive && promotion.productIds.length > 0) {
-      await this.repo.deactivateAllForProductsExcept(promotion.productIds, id);
-    }
-
-    const updated = await this.repo.submit(id);
-
-    if (
-      updated.active &&
-      isEffectiveNow(updated.startDate || null, updated.endDate || null)
-    ) {
-      for (const productId of updated.productIds) {
-        await this.applyToVariants(
-          productId,
-          updated.type,
-          updated.value,
-          updated.note,
-        );
-      }
-    }
-
-    return updated;
+    return promotion;
   }
 
   async activate(id: string): Promise<void> {

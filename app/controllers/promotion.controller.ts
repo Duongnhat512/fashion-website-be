@@ -123,6 +123,23 @@ export class PromotionController {
     }
   };
 
+  submit = async (req: Request, res: Response) => {
+    try {
+      await this.service.submit(req.params.id);
+      res.status(200).json(ApiResponse.success('Đã submit khuyến mãi'));
+    } catch (error) {
+      return res.status(500).json(
+        ApiResponse.error('Lỗi khi submit khuyến mãi', [
+          {
+            field: 'error',
+            message:
+              error instanceof Error ? error.message : 'Lỗi không xác định',
+          },
+        ]),
+      );
+    }
+  };
+
   activate = async (req: Request, res: Response) => {
     try {
       await this.service.activate(req.params.id);

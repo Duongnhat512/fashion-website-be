@@ -14,6 +14,7 @@ router.get('/', (req, res) => productController.getAllProducts(req, res));
 
 //Dùng phương thức này để lấy danh sách product
 router.get('/search', (req, res) => productController.searchProducts(req, res));
+router.get('/search/:id', (req, res) => productController.searchProductsByProductId(req, res));
 router.post('/', adminOnly, uploadProductWithVariants, (req, res) =>
   productController.createProduct(req, res),
 );

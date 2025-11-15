@@ -1,3 +1,5 @@
+import { ProductResponseDto } from '../../dtos/response/product/product.response';
+
 export interface IRedisSearchService {
   buildSearchQuery(query: string): string;
   searchProducts(
@@ -12,4 +14,5 @@ export interface IRedisSearchService {
     products: any[];
     total: number;
   }>;
+  searchProductsByProductId(productId: string): Promise<ProductResponseDto[]>;
 }

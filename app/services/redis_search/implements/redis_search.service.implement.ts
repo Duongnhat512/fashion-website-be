@@ -3,6 +3,7 @@ import { escapedCategoryId, normalizeText } from '../../../utils/product.util';
 import { ICategoryCacheService } from '../../../services/category/category_cache.service.interface';
 import { CategoryCacheService } from '../../../services/category/implements/category_cache.service.implement';
 import { IRedisSearchService } from '../redis_search.service.interface';
+import { ProductResponseDto } from '../../../dtos/response/product/product.response';
 
 export class RedisSearchService implements IRedisSearchService {
   private readonly indexName = 'idx:products';
@@ -198,6 +199,60 @@ export class RedisSearchService implements IRedisSearchService {
     } catch (error) {
       console.error('Search error:', error);
       throw error;
+    }
+  }
+
+  async searchProductsByProductId(
+    productId: string,
+  ): Promise<ProductResponseDto[]> {
+    try {
+      if (!productId || productId.trim() === '') {
+        return [];
+      }
+
+      // Sử dụng HGETALL trực tiếp thay vì FT.SEARCH vì tìm theo ID cụ thể
+      const productKey = `product:${productId}`;
+      const productData = await redis.hgetall(productKey);
+
+      if (!productData || Object.keys(productData).length === 0) {
+        return [];
+      }
+
+      // Chỉ trả về nếu status là active
+      if (productData.status !== 'active') {
+        return [];
+      }
+
+      // Parse product data
+      const product: any = {};
+
+      for (const [key, value] of Object.entries(productData)) {
+        if (key === 'createdAt' || key === 'updatedAt') {
+          product[key] = new Date(parseInt(value));
+        } else if (key === 'ratingAverage') {
+          product[key] = parseFloat(value);
+        } else if (key === 'ratingCount') {
+          product[key] = parseInt(value);
+        } else if (key === 'variants') {
+          try {
+            product[key] = JSON.parse(value);
+          } catch (error) {
+            product[key] = [];
+          }
+        } else {
+          product[key] = value;
+        }
+      }
+
+      // Remove embedding nếu có
+      if (product.embedding) {
+        delete product.embedding;
+      }
+
+      return [product];
+    } catch (error) {
+      console.error(`Error searching product by ID ${productId}:`, error);
+      return [];
     }
   }
 }
