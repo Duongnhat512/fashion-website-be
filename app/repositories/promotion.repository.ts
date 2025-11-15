@@ -274,6 +274,10 @@ export class PromotionRepository {
 
     const [data, total] = await this.repo.findAndCount({
       where,
+      relations: {
+        promotionProducts: { product: true },
+        category: true,
+      },
     });
     return {
       data: data.map(this.toDto),
