@@ -4,6 +4,7 @@ export class ReviewResponseDto {
   userId!: string;
   userName!: string;
   userAvatar?: string;
+  images!: string[];
   rating!: number;
   comment?: string;
   isVerified!: boolean;

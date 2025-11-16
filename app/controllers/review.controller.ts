@@ -72,6 +72,27 @@ export class ReviewController {
     }
   }
 
+  async getAllReviews(req: Request, res: Response) {
+    try {
+      const page = req.query.page ? Number(req.query.page) : 1;
+      const limit = req.query.limit ? Number(req.query.limit) : 10;
+      const reviews = await this.reviewService.getAllReviews(page, limit);
+      return res
+        .status(200)
+        .json(ApiResponse.success('Danh sách tất cả đánh giá', reviews));
+    }
+    catch (error: any) {
+      return res.status(400).json(
+        ApiResponse.error(error.message || 'Lấy danh sách đánh giá thất bại', [
+          {
+            field: 'getAllReviews',
+            message: [error.message || 'Lấy danh sách đánh giá thất bại'],
+          },
+        ]),
+      );
+    }
+  }
+
   async updateReview(req: Request, res: Response) {
     let publicIds: string[] = [];
 

@@ -37,6 +37,14 @@ export class ReviewService implements IReviewService {
     return newReview;
   }
 
+  async getAllReviews(
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<PaginatedReviewsResponseDto> {
+    return this.reviewRepository.getAllReviews(page, limit);
+  }
+  
+
   async updateReview(
     review: UpdateReviewRequestDto,
     userId: string,

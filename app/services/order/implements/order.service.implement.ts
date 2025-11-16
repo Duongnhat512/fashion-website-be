@@ -61,13 +61,15 @@ export class OrderService implements IOrderService {
             await this.inventoryRepository.getInventoryByVariantId(
               item.variant.id,
             );
-
+          console.log('variant id:', item.variant.id);
           let allocated = false;
           for (const c of candidates) {
             const inv = await this.inventoryRepository.getInventoryById(c.id);
+            console.log('Checking inventory:', inv);
             if (!inv) continue;
 
             const available = inv.onHand - inv.reserved;
+            console.log('Available inventory:', available);
             if (available >= item.quantity) {
               warehouseAllocations.push({
                 item,

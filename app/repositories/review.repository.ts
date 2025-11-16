@@ -64,6 +64,7 @@ export class ReviewRepository {
       userId: review.user.id,
       userName: review.user.fullname,
       userAvatar: review.user.avt,
+     images: review.images || [], 
       rating: review.rating,
       comment: review.comment,
       isVerified: review.isVerified,
@@ -99,6 +100,7 @@ export class ReviewRepository {
         userAvatar: review.user.avt,
         rating: review.rating,
         comment: review.comment,
+        images: review.images || [], 
         isVerified: review.isVerified,
         createdAt: review.createdAt,
         updatedAt: review.updatedAt,
@@ -125,6 +127,46 @@ export class ReviewRepository {
       },
     });
   }
+async getAllReviews(
+  page: number = 1,
+  limit: number = 10
+): Promise<PaginatedReviewsResponseDto> {
+  const [reviews, total] = await this.reviewRepository.findAndCount({
+    relations: {
+      user: true,
+      product: true,
+    },
+    skip: (page - 1) * limit,
+    take: limit,
+    order: {
+      createdAt: 'DESC',
+    },
+  });
+
+  return {
+    reviews: reviews.map((review) => ({
+      id: review.id,
+      productId: review.product.id,
+      userId: review.user.id,
+     images: review.images || [], 
+      userName: review.user.fullname,
+      userAvatar: review.user.avt,
+      rating: review.rating,
+      comment: review.comment,
+      isVerified: review.isVerified,
+      createdAt: review.createdAt,
+      updatedAt: review.updatedAt,
+    })),
+    pagination: {
+      total,
+      totalPages: Math.ceil(total / limit),
+      hasNext: page * limit < total,
+      hasPrev: page > 1,
+      page,
+      limit,
+    },
+  };
+}
 
   async calculateProductRating(productId: string): Promise<{
     average: number;

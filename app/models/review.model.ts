@@ -1,15 +1,3 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  ManyToOne,
-  JoinColumn,
-} from 'typeorm';
-import { Product } from './product.model';
-import User from './user.model';
-
 @Entity({ name: 'reviews' })
 export class Review {
   @PrimaryGeneratedColumn('uuid')
@@ -32,9 +20,14 @@ export class Review {
   @Column({ type: 'jsonb', nullable: true })
   images?: string[];
 
-  @ManyToOne(() => Review, (review) => review.replyTo)
+  // ✔ A reply belongs to one review
+  @ManyToOne(() => Review, (review) => review.replies, { nullable: true })
   @JoinColumn({ name: 'reply_to_id' })
   replyTo?: Review;
+
+  // ✔ A review can have many replies
+  @OneToMany(() => Review, (review) => review.replyTo)
+  replies?: Review[];
 
   @Column({ type: 'boolean', default: false, name: 'is_verified' })
   isVerified!: boolean;
