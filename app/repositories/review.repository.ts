@@ -10,7 +10,7 @@ import {
   UpdateReviewRequestDto,
 } from '../dtos/request/review/review.request';
 import { Product } from '../models/product.model';
-
+import { IsNull, Not } from "typeorm";
 export class ReviewRepository {
   private readonly reviewRepository: Repository<Review>;
   private readonly productRepository: Repository<Product>;
@@ -42,7 +42,35 @@ export class ReviewRepository {
   }
 
   async deleteReview(id: string): Promise<void> {
+    console.log(`Deleting review ${id} and all its replies...`);
+
+    // First, delete all replies to this review
+    await this.deleteReviewReplies(id);
+
+    // Then delete the main review
     await this.reviewRepository.delete(id);
+
+    console.log(`Successfully deleted review ${id} and all its replies`);
+  }
+
+  /**
+   * Delete all replies for a given review (recursive for nested replies)
+   */
+  private async deleteReviewReplies(reviewId: string): Promise<void> {
+    const replies = await this.reviewRepository.find({
+      where: { replyTo: { id: reviewId } },
+    });
+
+    if (replies.length > 0) {
+      console.log(`Found ${replies.length} replies for review ${reviewId}`);
+    }
+
+    for (const reply of replies) {
+      // Recursively delete replies of replies (nested replies)
+      await this.deleteReviewReplies(reply.id);
+      await this.reviewRepository.delete(reply.id);
+      console.log(`Deleted reply ${reply.id}`);
+    }
   }
 
   async getReviewById(id: string): Promise<ReviewResponseDto> {
@@ -51,6 +79,10 @@ export class ReviewRepository {
       relations: {
         product: true,
         user: true,
+        replyTo: true,
+        replies: {
+          user: true,
+        },
       },
     });
 
@@ -60,10 +92,11 @@ export class ReviewRepository {
 
     return {
       id: review.id,
-      productId: review.product.id,
-      userId: review.user.id,
-      userName: review.user.fullname,
-      userAvatar: review.user.avt,
+      productId: review.product?.id || '',
+      userId: review.user?.id || '',
+      userName: review.user?.fullname || '',
+      replyToId: review.replyTo ? review.replyTo.id : null,
+      userAvatar: review.user?.avt || '',
      images: review.images || [], 
       rating: review.rating,
       comment: review.comment,
@@ -73,38 +106,99 @@ export class ReviewRepository {
     };
   }
 
+  /**
+   * Get review entity with relations (for internal use)
+   */
+  async getReviewEntityById(id: string): Promise<Review> {
+    const review = await this.reviewRepository.findOne({
+      where: { id },
+      relations: {
+        product: true,
+        user: true,
+        replyTo: true,
+        replies: true,
+      },
+    });
+
+    if (!review) {
+      throw new Error('Không tìm thấy đánh giá.');
+    }
+
+    return review;
+  }
+
   async getReviewsByProductId(
     productId: string,
     page: number = 1,
     limit: number = 10,
   ): Promise<PaginatedReviewsResponseDto> {
-    const [reviews, total] = await this.reviewRepository.findAndCount({
-      where: { product: { id: productId } },
-      relations: {
-        user: true,
-        product: true,
-      },
-      skip: (page - 1) * limit,
-      take: limit,
-      order: {
-        createdAt: 'DESC',
-      },
-    });
+ const [reviews, total] = await this.reviewRepository.findAndCount({
+  relations: {
+    user: true,
+    product: true,
+    replyTo: true,
+    replies: {
+      user: true,
+    },
+  },
+  where: {
+    replyTo: IsNull(),
+    // Ensure user and product exist
+    user: {
+      id: Not(IsNull()),
+    },
+    product: {
+      id: Not(IsNull()),
+    },
+  },
+  skip: (page - 1) * limit,
+  take: limit,
+  order: {
+    createdAt: "DESC",
+  },
+});
+
 
     return {
-      reviews: reviews.map((review) => ({
-        id: review.id,
-        productId: review.product.id,
-        userId: review.user.id,
-        userName: review.user.fullname,
-        userAvatar: review.user.avt,
-        rating: review.rating,
-        comment: review.comment,
-        images: review.images || [], 
-        isVerified: review.isVerified,
-        createdAt: review.createdAt,
-        updatedAt: review.updatedAt,
-      })),
+      reviews: reviews.map((review) => {
+        // Debug logging for null relations
+        if (!review.product) {
+          console.warn(`Review ${review.id} has no product relation`);
+        }
+        if (!review.user) {
+          console.warn(`Review ${review.id} has no user relation`);
+        }
+
+        return {
+          id: review.id,
+          productId: review.product?.id || '',
+          userId: review.user?.id || '',
+          userName: review.user?.fullname || '',
+          replyToId: review.replyTo ? review.replyTo.id : null,
+          userAvatar: review.user?.avt || '',
+          rating: review.rating,
+          comment: review.comment,
+          images: review.images || [], 
+          isVerified: review.isVerified,
+          createdAt: review.createdAt,
+          updatedAt: review.updatedAt,
+            replies: review.replies?.map((reply) => {
+              if (!reply.user) {
+                console.warn(`Reply ${reply.id} has no user relation`);
+              }
+              return {
+                id: reply.id,
+                userId: reply.user?.id || '',
+                userName: reply.user?.fullname || '',
+                userAvatar: reply.user?.avt || '', 
+                comment: reply.comment,
+                rating: reply.rating,
+                images: reply.images || [],
+                createdAt: reply.createdAt,
+              };
+            }) || [],
+        };
+      }),
       pagination: {
         total,
         totalPages: Math.ceil(total / limit),
@@ -131,32 +225,72 @@ async getAllReviews(
   page: number = 1,
   limit: number = 10
 ): Promise<PaginatedReviewsResponseDto> {
-  const [reviews, total] = await this.reviewRepository.findAndCount({
-    relations: {
+ const [reviews, total] = await this.reviewRepository.findAndCount({
+  relations: {
+    user: true,
+    product: true,
+    replyTo: true,
+    replies: {
       user: true,
-      product: true,
     },
-    skip: (page - 1) * limit,
-    take: limit,
-    order: {
-      createdAt: 'DESC',
+  },
+  where: {
+    replyTo: IsNull(),
+    // Ensure user and product exist
+    user: {
+      id: Not(IsNull()),
     },
-  });
+    product: {
+      id: Not(IsNull()),
+    },
+  },
+  skip: (page - 1) * limit,
+  take: limit,
+  order: {
+    createdAt: "DESC",
+  },
+});
 
   return {
-    reviews: reviews.map((review) => ({
-      id: review.id,
-      productId: review.product.id,
-      userId: review.user.id,
-     images: review.images || [], 
-      userName: review.user.fullname,
-      userAvatar: review.user.avt,
-      rating: review.rating,
-      comment: review.comment,
-      isVerified: review.isVerified,
-      createdAt: review.createdAt,
-      updatedAt: review.updatedAt,
-    })),
+    reviews: reviews.map((review) => {
+      // Debug logging for null relations
+      if (!review.product) {
+        console.warn(`Review ${review.id} has no product relation`);
+      }
+      if (!review.user) {
+        console.warn(`Review ${review.id} has no user relation`);
+      }
+
+      return {
+        id: review.id,
+        productId: review.product?.id || '',
+        userId: review.user?.id || '',
+        images: review.images || [], 
+        replyToId: review.replyTo ? review.replyTo.id : null,
+        userName: review.user?.fullname || '',
+        userAvatar: review.user?.avt || '',
+        rating: review.rating,
+        comment: review.comment,
+        isVerified: review.isVerified,
+        createdAt: review.createdAt,
+        updatedAt: review.updatedAt,
+          replies: review.replies?.map((reply) => {
+            if (!reply.user) {
+              console.warn(`Reply ${reply.id} has no user relation`);
+            }
+            return {
+              id: reply.id,
+              userId: reply.user?.id || '',
+              userName: reply.user?.fullname || '',
+              userAvatar: reply.user?.avt || '',
+              comment: reply.comment,
+              rating: reply.rating,
+              images: reply.images || [],
+              createdAt: reply.createdAt,
+            };
+          }) || [],
+      };
+    }),
     pagination: {
       total,
       totalPages: Math.ceil(total / limit),

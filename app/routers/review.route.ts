@@ -15,6 +15,9 @@ router.get('/:id', (req, res) => reviewController.getReviewById(req, res));
 router.post('/', authenticatedUser, uploadMultiple, (req, res) =>
   reviewController.createReview(req, res),
 );
+router.post('/merge', authenticatedUser, (req, res) =>
+  reviewController.mergeReviews(req, res),
+);
 router.put('/:id', authenticatedUser, uploadMultiple, (req, res) =>
   reviewController.updateReview(req, res),
 );

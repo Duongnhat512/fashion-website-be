@@ -1,40 +1,53 @@
-@Entity({ name: 'reviews' })
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  OneToMany,
+} from 'typeorm';
+import { Product } from './product.model';
+import User from './user.model';
+
+@Entity({ name: "reviews" })
 export class Review {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id!: string;
 
   @ManyToOne(() => Product, (product) => product.reviews)
-  @JoinColumn({ name: 'product_id' })
+  @JoinColumn({ name: "product_id" })
   product!: Product;
 
   @ManyToOne(() => User)
-  @JoinColumn({ name: 'user_id' })
+  @JoinColumn({ name: "user_id" })
   user!: User;
 
-  @Column({ type: 'int' })
+  @Column({ type: "int" })
   rating!: number;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: "text", nullable: true })
   comment?: string;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({ type: "jsonb", nullable: true })
   images?: string[];
 
-  // ✔ A reply belongs to one review
+  /** 👇 Quan hệ REPLY-TO */
   @ManyToOne(() => Review, (review) => review.replies, { nullable: true })
-  @JoinColumn({ name: 'reply_to_id' })
-  replyTo?: Review;
+  @JoinColumn({ name: "reply_to_id" })
+  replyTo?: Review | null;
 
-  // ✔ A review can have many replies
+  /** 👇 Quan hệ LIST REPLIES */
   @OneToMany(() => Review, (review) => review.replyTo)
-  replies?: Review[];
+  replies!: Review[];
 
-  @Column({ type: 'boolean', default: false, name: 'is_verified' })
+  @Column({ type: "boolean", default: false })
   isVerified!: boolean;
 
-  @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
+  @CreateDateColumn({ type: "timestamptz", name: "created_at" })
   createdAt!: Date;
 
-  @UpdateDateColumn({ type: 'timestamptz', name: 'updated_at' })
+  @UpdateDateColumn({ type: "timestamptz", name: "updated_at" })
   updatedAt!: Date;
 }

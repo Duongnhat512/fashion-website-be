@@ -27,4 +27,9 @@ export interface IReviewService {
     page: number,
     limit: number,
   ): Promise<PaginatedReviewsResponseDto>;
+  mergeReviews(
+    reviewIds: string[],
+    userId: string,
+    userRole: string,
+  ): Promise<ReviewResponseDto>;
 }

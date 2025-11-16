@@ -30,6 +30,11 @@ export class ReviewService implements IReviewService {
   ): Promise<ReviewResponseDto> {
     await this.productRepository.getProductById(review.productId);
 
+    // Validate replyToId if provided
+    if (review.replyToId) {
+      await this.reviewRepository.getReviewById(review.replyToId);
+    }
+
     const newReview = await this.reviewRepository.createReview(review, userId);
 
     await this.updateProductRating(review.productId);
@@ -90,6 +95,76 @@ export class ReviewService implements IReviewService {
     limit: number = 10,
   ): Promise<PaginatedReviewsResponseDto> {
     return this.reviewRepository.getReviewsByProductId(productId, page, limit);
+  }
+
+  async mergeReviews(
+    reviewIds: string[],
+    userId: string,
+    userRole: string,
+  ): Promise<ReviewResponseDto> {
+    if (reviewIds.length < 2) {
+      throw new Error('Cần ít nhất 2 review để gộp');
+    }
+
+    // Get all reviews to merge
+    const reviews = [];
+    let productId: string | null = null;
+    let totalRating = 0;
+    const comments = [];
+    const allImages = [];
+
+    for (const reviewId of reviewIds) {
+      const review = await this.reviewRepository.getReviewById(reviewId);
+
+      // Check permissions - user can only merge their own reviews or admin can merge any
+      if (review.userId !== userId && userRole !== Role.ADMIN) {
+        throw new Error('Bạn không có quyền gộp review này');
+      }
+
+      // All reviews must be for the same product
+      if (productId && review.productId !== productId) {
+        throw new Error('Không thể gộp reviews của các sản phẩm khác nhau');
+      }
+      productId = review.productId;
+
+      reviews.push(review);
+      totalRating += review.rating;
+      if (review.comment) {
+        comments.push(review.comment);
+      }
+      if (review.images) {
+        allImages.push(...review.images);
+      }
+    }
+
+    // Check if any review has replies (nested reviews)
+    for (const review of reviews) {
+      const reviewEntity = await this.reviewRepository.getReviewEntityById(review.id);
+      if (reviewEntity.replies && reviewEntity.replies.length > 0) {
+        throw new Error(`Không thể gộp review ${review.id} vì nó có replies`);
+      }
+    }
+
+    // Create merged review
+    const mergedReview = {
+      productId: productId!,
+      rating: Math.round(totalRating / reviews.length),
+      comment: comments.join('\n\n---\n\n'), // Join comments with separator
+      images: allImages.slice(0, 10), // Limit to 10 images
+    };
+
+    // Create the merged review
+    const newReview = await this.reviewRepository.createReview(mergedReview, userId);
+
+    // Delete the original reviews (this will also delete their replies if any)
+    for (const review of reviews) {
+      await this.reviewRepository.deleteReview(review.id);
+    }
+
+    // Update product rating
+    await this.updateProductRating(productId!);
+
+    return newReview;
   }
 
   private async updateProductRating(productId: string): Promise<void> {
