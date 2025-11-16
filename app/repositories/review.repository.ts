@@ -142,12 +142,11 @@ export class ReviewRepository {
     },
   },
   where: {
-    replyTo: IsNull(),
-    // Ensure user and product exist
-    user: {
-      id: Not(IsNull()),
-    },
     product: {
+      id: productId,
+    },
+    replyTo: IsNull(),
+    user: {
       id: Not(IsNull()),
     },
   },
