@@ -229,6 +229,7 @@ export class ProductRepository {
     return products.map((product) => ({
       ...product,
       categoryId: product.category?.id,
+      categoryName: product.category?.name,
       category: undefined,
       brand: product.brand ?? '',
     }));

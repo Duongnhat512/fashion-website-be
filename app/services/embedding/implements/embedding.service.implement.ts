@@ -28,21 +28,18 @@ export class EmbeddingService implements IEmbeddingService {
    */
   async generateEmbedding(text: string): Promise<number[]> {
     try {
-      // TODO: Replace with Google Embedding API call
-      // Example:
-      // const response = await axios.post(
-      //   `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${config.gemini.apiKey}`,
-      //   { content: { parts: [{ text }] } }
-      // );
-      // return response.data.embedding.values;
+      // Sử dụng model embedding chuyên dụng
+      const embeddingModel = this.genAI.getGenerativeModel({
+        model: 'text-embedding-004',
+      });
 
-      // Current implementation: hash-based embedding (fallback)
-      const embedding = this.createSimpleEmbedding(text);
+      const result = await embeddingModel.embedContent(text);
+      const embedding = result.embedding;
 
-      return embedding;
+      return embedding.values;
     } catch (error) {
       logger.error('Error generating embedding:', error);
-      // Fallback to simple embedding
+      // Chỉ dùng fallback khi API lỗi, nhưng nên log lại để fix
       return this.createSimpleEmbedding(text);
     }
   }

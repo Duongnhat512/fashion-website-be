@@ -1,4 +1,8 @@
-import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
+import {
+  FunctionCallingMode,
+  GoogleGenerativeAI,
+  SchemaType,
+} from '@google/generative-ai';
 import { config } from '../../../config/env';
 import {
   ChatbotRequest,
@@ -46,12 +50,47 @@ export class ChatbotService implements IChatbotService {
     // Initialize Gemini model with function calling
     this.model = this.genAI.getGenerativeModel({
       model: config.gemini.model,
+      systemInstruction: `
+        Bạn là một trợ lý bán hàng thời trang thông minh, thân thiện của cửa hàng.
+        Nhiệm vụ: Tìm kiếm sản phẩm, tư vấn size/màu và hỗ trợ đặt hàng (Function Calling).
+        
+        QUY TẮC BẮT DI BẤT DỊCH:
+        
+        0. KHI NÀO GỌI HÀM:
+          - Khi khách hỏi về sản phẩm ("tìm", "có", "xem", "mua", v.v.) -> GỌI NGAY searchProducts
+          - Khi khách muốn thêm vào giỏ -> GỌI addToCart
+          - Khi khách muốn đặt hàng -> GỌI createOrder
+          - KHÔNG TỰ Ý TRẢ LỜI mà không gọi hàm khi khách hỏi về sản phẩm.
+        1. ID VÀ DỮ LIỆU:
+          - TUYỆT ĐỐI KHÔNG tự bịa ra 'productId' hoặc 'variantId'. Chỉ sử dụng ID từ kết quả của hàm 'searchProducts' hoặc lịch sử hội thoại.
+          - Nếu không tìm thấy sản phẩm trong dữ liệu, hãy xin lỗi và gợi ý từ khóa khác.
+    
+        2. QUY TRÌNH THÊM GIỎ HÀNG (addToCart):
+          - Khi khách nói "mua cái này", "lấy màu xanh": PHẢI kiểm tra xem sản phẩm đó có cần chọn Size/Màu không.
+          - Nếu thiếu Size/Màu -> HỎI KHÁCH HÀNG (VD: "Dạ mẫu này bên em còn size M và L, bạn lấy size nào ạ?").
+          - Chỉ gọi 'addToCart' khi đã xác định được CHÍNH XÁC 'variantId' tương ứng.
+    
+        3. QUY TRÌNH TẠO ĐƠN (createOrder):
+          - Để đặt hàng, BẮT BUỘC phải có đủ: Tên, SĐT, và Địa chỉ chi tiết.
+          - Về ĐỊA CHỈ: Hệ thống cần 3 cấp hành chính riêng biệt. Hãy hỏi hoặc trích xuất rõ ràng:
+            + Tỉnh/Thành phố (city)
+            + Quận/Huyện (district)
+            + Phường/Xã (ward)
+            + Số nhà/Đường (fullAddress)
+          - Nếu khách chỉ nói "Ở Hà Nội", hãy hỏi thêm Quận, Phường và địa chỉ cụ thể.
+    
+        4. PHONG CÁCH:
+          - Trả lời ngắn gọn, súc tích, không văn vở dài dòng.
+          - Xưng hô: "Dạ/mình" hoặc "em/anh/chị" tùy ngữ cảnh, luôn lịch sự.
+          - Luôn gợi mở để khách mua thêm hàng.
+      `,
       tools: [
         {
           functionDeclarations: [
             {
               name: 'searchProducts',
-              description: 'Tìm sản phẩm theo mô tả',
+              description:
+                'Tìm kiếm sản phẩm. QUAN TRỌNG: Hãy trích xuất TỪ KHÓA CHÍNH về sản phẩm từ câu nói của khách (Ví dụ: khách nói "tìm cho anh quần kaki đi", hãy search query="quần kaki"). Đừng đưa các từ vô nghĩa như "tôi muốn", "tìm giúp", "màu gì đẹp" vào query.',
               parameters: {
                 type: SchemaType.OBJECT,
                 properties: {
@@ -95,7 +134,8 @@ export class ChatbotService implements IChatbotService {
             },
             {
               name: 'createOrder',
-              description: 'Tạo đơn hàng',
+              description:
+                'Tạo đơn hàng. QUAN TRỌNG: Chỉ gọi hàm này khi đã có ĐẦY ĐỦ: tên, sđt, và địa chỉ gồm 3 cấp (Xã/Phường, Quận/Huyện, Tỉnh/Thành phố). Nếu thiếu bất kỳ cấp nào của địa chỉ, hãy hỏi lại người dùng.',
               parameters: {
                 type: SchemaType.OBJECT,
                 properties: {
@@ -113,15 +153,17 @@ export class ChatbotService implements IChatbotService {
                   },
                   city: {
                     type: SchemaType.STRING,
-                    description: 'Thành phố',
+                    description:
+                      'Tên Tỉnh hoặc Thành phố trực thuộc trung ương (VD: Hà Nội, TP.HCM)',
                   },
                   district: {
                     type: SchemaType.STRING,
-                    description: 'Quận/Huyện',
+                    description:
+                      'Tên Quận hoặc Huyện (VD: Quận 1, Huyện Củ Chi)',
                   },
                   ward: {
                     type: SchemaType.STRING,
-                    description: 'Phường/Xã',
+                    description: 'Tên Phường hoặc Xã (VD: Phường Bến Nghé)',
                   },
                   isCOD: {
                     type: SchemaType.BOOLEAN,
@@ -141,6 +183,11 @@ export class ChatbotService implements IChatbotService {
           ],
         },
       ],
+      toolConfig: {
+        functionCallingConfig: {
+          mode: FunctionCallingMode.AUTO,
+        },
+      },
     });
   }
 
@@ -151,7 +198,8 @@ export class ChatbotService implements IChatbotService {
 
       // Get conversation history - limit to 3-4 messages to avoid 503 errors
       // Gemini 503 errors are caused by oversized requests
-      const history = await this.memoryService.getLimitedHistory(sessionId, 4);
+      // Get conversation history - increased limit for better context
+      const history = await this.memoryService.getLimitedHistory(sessionId, 20);
 
       // Convert history to Gemini format and truncate long messages
       let chatHistory = history.map((msg) => {
@@ -286,9 +334,24 @@ export class ChatbotService implements IChatbotService {
         const finalResponse = finalResult.response;
 
         // Add model response to history
+        let historyText = finalResponse.text();
+        if (products && products.length > 0) {
+          const productContext = products
+            .map(
+              (p) =>
+                `Product: ${p.name} (ID: ${p.id}). Variants: ${p.variants
+                  .map(
+                    (v) => `[Color: ${v.color}, Size: ${v.size}, ID: ${v.id}]`,
+                  )
+                  .join(', ')}`,
+            )
+            .join('\n');
+          historyText += `\n\n[System Context - Thông tin sản phẩm đã tìm thấy (Khách hàng không nhìn thấy dòng này, chỉ dùng để bot tham chiếu đặt hàng):\n${productContext}]`;
+        }
+
         await this.memoryService.addMessage(sessionId, {
           role: 'model',
-          parts: [{ text: finalResponse.text() }],
+          parts: [{ text: historyText }],
         });
 
         return {
@@ -498,6 +561,10 @@ export class ChatbotService implements IChatbotService {
           cartItems: [] as any,
         });
       }
+
+      logger.info(
+        `Add item to cart, data = ${productId}, ${variantId}, ${quantity}`,
+      );
 
       // Add item to cart
       await this.cartService.addCartItem({

@@ -191,6 +191,7 @@ export class ProductCacheService implements IProductCacheService {
         brand: product.brand || '',
         tags: product.tags || '',
         categoryId: product.categoryId || '',
+        categoryName: product.categoryName || '',
         status: product.status || 'active',
         ratingAverage: product.ratingAverage,
         ratingCount: product.ratingCount,
@@ -207,6 +208,7 @@ export class ProductCacheService implements IProductCacheService {
           product.name,
           product.shortDescription,
           product.brand,
+          product.categoryName || '',
           this.extractVariantSearchText(product.variants),
         ]
           .filter(Boolean)

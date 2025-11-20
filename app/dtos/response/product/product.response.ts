@@ -9,6 +9,7 @@ export class ProductResponseDto {
   imageUrl: string;
   brand: string;
   categoryId?: string;
+  categoryName?: string;
   status: string;
   tags: string;
   ratingAverage: number;

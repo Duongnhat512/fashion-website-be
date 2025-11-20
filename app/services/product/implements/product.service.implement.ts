@@ -233,7 +233,9 @@ export class ProductService implements IProductService {
     await Promise.all(inventoryPromises);
   }
 
-  async searchProductsByProductId(productId: string): Promise<ProductResponseDto[]> {
+  async searchProductsByProductId(
+    productId: string,
+  ): Promise<ProductResponseDto[]> {
     return this.redisSearchService.searchProductsByProductId(productId);
   }
 }
