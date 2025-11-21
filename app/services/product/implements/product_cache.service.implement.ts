@@ -113,6 +113,17 @@ export class ProductCacheService implements IProductCacheService {
         'searchContent',
         'TEXT',
         'NOSTEM',
+
+        'embedding',
+        'VECTOR',
+        'HNSW',
+        '6',
+        'TYPE',
+        'FLOAT32',
+        'DIM',
+        '768',
+        'DISTANCE_METRIC',
+        'COSINE',
       );
     } catch (error) {
       console.error('Error creating product search index:', error);
@@ -170,6 +181,8 @@ export class ProductCacheService implements IProductCacheService {
 
   /**
    * Lưu product vào Redis cache
+   * Note: Embedding sẽ được lưu riêng bởi EmbeddingScheduler
+   * Nhưng nếu product đã có embedding trong DB/cache, sẽ lưu luôn
    */
   async indexProduct(product: ProductResponseDto): Promise<void> {
     try {
@@ -182,7 +195,7 @@ export class ProductCacheService implements IProductCacheService {
         }),
       );
 
-      const productData = {
+      const productData: any = {
         id: product.id,
         name: product.name,
         slug: product.slug,
@@ -215,6 +228,41 @@ export class ProductCacheService implements IProductCacheService {
           .map(normalizeText)
           .join(' '),
       };
+
+      // Nếu product có embedding (từ DB hoặc đã generate), lưu dạng binary
+      // Embedding được lưu dạng Buffer/Float32Array cho Redis Vector Search
+      if ((product as any).embedding) {
+        const embedding = (product as any).embedding;
+        let embeddingBuffer: Buffer;
+
+        // Nếu embedding là array số, convert sang binary
+        if (Array.isArray(embedding)) {
+          embeddingBuffer = Buffer.from(new Float32Array(embedding).buffer);
+        }
+        // Nếu embedding là JSON string, parse rồi convert
+        else if (typeof embedding === 'string') {
+          try {
+            const embeddingArray = JSON.parse(embedding);
+            embeddingBuffer = Buffer.from(
+              new Float32Array(embeddingArray).buffer,
+            );
+          } catch {
+            // Skip nếu không parse được
+            embeddingBuffer = Buffer.alloc(0);
+          }
+        }
+        // Nếu đã là Buffer, dùng luôn
+        else if (Buffer.isBuffer(embedding)) {
+          embeddingBuffer = embedding;
+        } else {
+          embeddingBuffer = Buffer.alloc(0);
+        }
+
+        // Chỉ lưu nếu embedding hợp lệ (768 * 4 bytes = 3072 bytes)
+        if (embeddingBuffer.length === 768 * 4) {
+          productData.embedding = embeddingBuffer;
+        }
+      }
 
       await redis.hset(`${this.PRODUCT_PREFIX}${product.id}`, productData);
     } catch (error) {

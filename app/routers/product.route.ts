@@ -1,6 +1,10 @@
 import { Router } from 'express';
 import { ProductController } from '../controllers/product.controller';
-import { adminOnly } from '../middlewares/auth.middleware';
+import {
+  adminOnly,
+  authenticatedUser,
+  optionalAuth,
+} from '../middlewares/auth.middleware';
 import {
   uploadForImportSingle,
   uploadProductWithVariants,
@@ -14,7 +18,14 @@ router.get('/', (req, res) => productController.getAllProducts(req, res));
 
 //Dùng phương thức này để lấy danh sách product
 router.get('/search', (req, res) => productController.searchProducts(req, res));
-router.get('/search/:id', (req, res) => productController.searchProductsByProductId(req, res));
+router.get('/search/:id', optionalAuth, (req, res) =>
+  productController.searchProductsByProductId(req, res),
+);
+
+// Get product recommendations for authenticated user
+router.get('/recommendations', authenticatedUser, (req, res) =>
+  productController.getRecommendations(req, res),
+);
 router.post('/', adminOnly, uploadProductWithVariants, (req, res) =>
   productController.createProduct(req, res),
 );

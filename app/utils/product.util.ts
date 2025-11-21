@@ -14,3 +14,28 @@ export const normalizeText = (text: string): string => {
     .replace(/\s+/g, ' ')
     .trim();
 };
+
+export function removeSearchFields(product: any): any {
+  if (!product) return product;
+
+  const searchFields = [
+    'embedding',
+    'embedding_json',
+    'shortDescriptionNormalized',
+    'nameNormalized',
+    'brandNormalized',
+    'tagsNormalized',
+    'searchContent',
+  ];
+
+  const cleaned = { ...product };
+  searchFields.forEach((field) => {
+    delete cleaned[field];
+  });
+
+  return cleaned;
+}
+
+export function removeSearchFieldsFromProducts(products: any[]): any[] {
+  return products.map((product) => removeSearchFields(product));
+}

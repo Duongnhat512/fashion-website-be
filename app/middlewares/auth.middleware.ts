@@ -70,6 +70,33 @@ export const authMiddleware = (allowedRoles: string[] = [Role.ADMIN]) => {
   };
 };
 
+export const optionalAuth = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader) {
+      return next();
+    }
+
+    const tokenParts = authHeader.split(' ');
+    if (tokenParts.length !== 2 || tokenParts[0] !== 'Bearer') {
+      return next();
+    }
+
+    const token = tokenParts[1];
+
+    const decoded = authService.verifyAccessToken(token);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    next();
+  }
+};
+
 export const adminOnly = authMiddleware([Role.ADMIN]);
 
 export const authenticatedUser = authMiddleware([Role.ADMIN, Role.USER]);

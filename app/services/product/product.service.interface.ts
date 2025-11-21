@@ -29,4 +29,10 @@ export interface IProductService {
   ): Promise<PaginatedProductsResponseDto>;
   createProductWithId(product: ProductRequestDto): Promise<ProductResponseDto>;
   searchProductsByProductId(productId: string): Promise<ProductResponseDto[]>;
+  updateUserPreference(
+    userId: number,
+    productEmbedding: number[],
+    weight: number,
+  ): Promise<void>;
+  getProductEmbedding(productId: string): Promise<number[] | null>;
 }
