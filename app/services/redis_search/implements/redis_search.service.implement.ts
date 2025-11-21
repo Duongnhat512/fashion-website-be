@@ -1,5 +1,9 @@
 import redis from '../../../config/redis.config';
-import { escapedCategoryId, normalizeText } from '../../../utils/product.util';
+import {
+  escapedCategoryId,
+  normalizeText,
+  removeSearchFields,
+} from '../../../utils/product.util';
 import { ICategoryCacheService } from '../../../services/category/category_cache.service.interface';
 import { CategoryCacheService } from '../../../services/category/implements/category_cache.service.implement';
 import { IRedisSearchService } from '../redis_search.service.interface';
@@ -186,10 +190,8 @@ export class RedisSearchService implements IRedisSearchService {
           }
         }
 
-        if (product.embedding) {
-          delete product.embedding;
-        }
-        products.push(product);
+        const cleanedProduct = removeSearchFields(product);
+        products.push(cleanedProduct);
       }
 
       return {
@@ -244,12 +246,9 @@ export class RedisSearchService implements IRedisSearchService {
         }
       }
 
-      // Remove embedding nếu có
-      if (product.embedding) {
-        delete product.embedding;
-      }
+      const cleanedProduct = removeSearchFields(product);
 
-      return [product];
+      return [cleanedProduct];
     } catch (error) {
       console.error(`Error searching product by ID ${productId}:`, error);
       return [];

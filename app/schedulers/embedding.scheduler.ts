@@ -34,9 +34,17 @@ export class EmbeddingScheduler {
         productText,
       );
 
-      // Store embedding in Redis (alongside product cache)
+      // Store embedding in Redis as binary (Float32Array) for vector search
+      // Redis Vector Search requires binary format (Blob) for FLOAT32 vectors
       const embeddingKey = `product:${product.id}`;
-      await redis.hset(embeddingKey, 'embedding', JSON.stringify(embedding));
+      const embeddingBuffer = Buffer.from(new Float32Array(embedding).buffer);
+      
+      // Store as binary blob for vector search (FT.SEARCH KNN query)
+      // Also keep JSON string for backward compatibility if needed
+      await redis.hset(embeddingKey, {
+        embedding: embeddingBuffer,
+        embedding_json: JSON.stringify(embedding), // For debugging/compatibility
+      });
 
       logger.info(`Generated embedding for product: ${productId}`);
     } catch (error) {
@@ -62,11 +70,15 @@ export class EmbeddingScheduler {
 
       for (const product of products) {
         try {
-          // Check if product already has embedding in Redis
+          // Check if product already has embedding in Redis (binary format)
           const embeddingKey = `product:${product.id}`;
-          const existingEmbedding = await redis.hget(embeddingKey, 'embedding');
+          const existingEmbedding = await redis.hgetBuffer(
+            embeddingKey,
+            'embedding',
+          );
 
-          if (existingEmbedding) {
+          // Check if embedding exists and has correct size (768 * 4 bytes = 3072 bytes)
+          if (existingEmbedding && existingEmbedding.length === 768 * 4) {
             logger.debug(
               `Product ${product.id} already has embedding, skipping`,
             );

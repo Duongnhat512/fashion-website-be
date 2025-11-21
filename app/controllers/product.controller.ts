@@ -22,6 +22,8 @@ import { IVariantService } from '../services/product/variant.service.interface';
 import { VariantService } from '../services/product/implements/variant.service.implement';
 import { IProductCacheService } from '../services/product/product_cache.service.interface';
 import { ProductCacheService } from '../services/product/implements/product_cache.service.implement';
+import { IRecommendationService } from '../services/recommendation/recommendation.service.interface';
+import { RecommendationService } from '../services/recommendation/implements/recommendation.service.implement';
 
 export class ProductController {
   private readonly productService: IProductService;
@@ -29,6 +31,7 @@ export class ProductController {
   private readonly importService: IImportService;
   private readonly variantService: IVariantService;
   private readonly productCacheService: IProductCacheService;
+  private readonly recommendationService: IRecommendationService;
 
   constructor() {
     this.productService = new ProductService();
@@ -36,12 +39,38 @@ export class ProductController {
     this.importService = new ProductImportService();
     this.variantService = new VariantService();
     this.productCacheService = new ProductCacheService();
+    this.recommendationService = new RecommendationService();
   }
 
   async getProductById(req: Request, res: Response) {
-    const { id } = req.params;
-    const product = await this.productService.getProductById(id);
-    res.status(200).json(ApiResponse.success('Thông tin sản phẩm', product));
+    try {
+      const { id } = req.params;
+      const product = await this.productService.getProductById(id);
+
+      // Track user view for recommendation (async, non-blocking)
+      const userId = (req as any).user?.userId;
+      if (userId) {
+        const embedding = await this.productService.getProductEmbedding(id);
+        if (embedding) {
+          return this.recommendationService.updateUserPreference(
+            parseInt(userId),
+            embedding,
+            0.1, // Weight for view action
+          );
+        }
+      }
+
+      res.status(200).json(ApiResponse.success('Thông tin sản phẩm', product));
+    } catch (error) {
+      res.status(500).json(
+        ApiResponse.error('Lỗi khi lấy thông tin sản phẩm', [
+          {
+            field: 'getProductById',
+            message: (error as Error).message || 'Lỗi không xác định',
+          },
+        ]),
+      );
+    }
   }
 
   async getAllProducts(req: Request, res: Response) {
@@ -714,8 +743,84 @@ export class ProductController {
   }
 
   async searchProductsByProductId(req: Request, res: Response) {
-    const { id } = req.params;
-    const products = await this.productService.searchProductsByProductId(id);
-    res.status(200).json(ApiResponse.success('Tìm kiếm sản phẩm', products));
+    try {
+      const { id } = req.params;
+      const products = await this.productService.searchProductsByProductId(id);
+
+      const userId = (req as any).user?.userId;
+      if (userId && products.length > 0) {
+        const productId = products[0].id;
+        const embedding = await this.productService.getProductEmbedding(
+          productId,
+        );
+
+        if (embedding) {
+          await this.recommendationService.updateUserPreference(
+            parseInt(userId),
+            embedding,
+            0.05,
+          );
+        }
+      }
+
+      res.status(200).json(ApiResponse.success('Tìm kiếm sản phẩm', products));
+    } catch (error) {
+      res.status(500).json(
+        ApiResponse.error('Lỗi khi tìm kiếm sản phẩm', [
+          {
+            field: 'searchProductsByProductId',
+            message: (error as Error).message || 'Lỗi không xác định',
+          },
+        ]),
+      );
+    }
+  }
+
+  /**
+   * Get product recommendations for the authenticated user
+   * Uses user preference vector to find similar products via KNN search
+   */
+  async getRecommendations(req: Request, res: Response) {
+    try {
+      // Get user ID from authenticated request
+      const userId = (req as any).user?.userId;
+      if (!userId) {
+        return res.status(401).json(
+          ApiResponse.error('Yêu cầu đăng nhập để xem gợi ý sản phẩm', [
+            {
+              field: 'authentication',
+              message: 'Người dùng chưa đăng nhập',
+            },
+          ]),
+        );
+      }
+
+      // Get limit from query params (default: 10)
+      const limit = parseInt((req.query.limit as string) || '10', 10);
+      const validatedLimit = Math.min(Math.max(limit, 1), 50); // Between 1 and 50
+
+      // Get recommendations using RecommendationService
+      const { RecommendationService } = await import(
+        '../services/recommendation/implements/recommendation.service.implement'
+      );
+      const recommendationService = new RecommendationService();
+      const recommendations = await recommendationService.getRecommendations(
+        parseInt(userId),
+        validatedLimit,
+      );
+
+      res
+        .status(200)
+        .json(ApiResponse.success('Danh sách sản phẩm gợi ý', recommendations));
+    } catch (error) {
+      res.status(500).json(
+        ApiResponse.error('Lỗi khi lấy gợi ý sản phẩm', [
+          {
+            field: 'getRecommendations',
+            message: (error as Error).message || 'Lỗi không xác định',
+          },
+        ]),
+      );
+    }
   }
 }
