@@ -15,6 +15,7 @@ import CartRepository from '../../../repositories/cart.repository';
 import CartItemRequestDto from '../../../dtos/request/cart/cart_item.request';
 import { IProductCacheService } from '../../product/product_cache.service.interface';
 import { ProductCacheService } from '../../product/implements/product_cache.service.implement';
+import { RecommendationService } from '../../recommendation/implements/recommendation.service.implement';
 
 export class OrderService implements IOrderService {
   private readonly orderRepository: OrderRepository;
@@ -24,6 +25,7 @@ export class OrderService implements IOrderService {
   private readonly cartRepository: CartRepository;
   private readonly cartItemRepository: CartItemRepository;
   private readonly productCacheService: IProductCacheService;
+  private readonly recommendationService: RecommendationService;
 
   constructor() {
     this.orderRepository = new OrderRepository();
@@ -33,6 +35,7 @@ export class OrderService implements IOrderService {
     this.cartRepository = new CartRepository();
     this.cartItemRepository = new CartItemRepository();
     this.productCacheService = new ProductCacheService();
+    this.recommendationService = new RecommendationService();
   }
 
   async updateOrder(order: UpdateOrderRequestDto): Promise<OrderResponseDto> {
@@ -153,6 +156,39 @@ export class OrderService implements IOrderService {
             if (product) {
               await this.productCacheService.indexProduct(product);
               updatedProductIds.add(item.product.id);
+            }
+          }
+        }
+
+        // Track user purchase for recommendation (async, non-blocking)
+        // Update user preference vector based on purchased products
+        if (order.user && order.user.id) {
+          const userId = parseInt(order.user.id);
+          const { ProductService } = await import(
+            '../../product/implements/product.service.implement'
+          );
+          const productService = new ProductService();
+
+          // Track each purchased product asynchronously
+          for (const item of order.items) {
+            if (item.product.id) {
+              productService
+                .getProductEmbedding(item.product.id)
+                .then((embedding) => {
+                  if (embedding) {
+                    return this.recommendationService.updateUserPreference(
+                      userId,
+                      embedding,
+                      0.5, // Higher weight for purchase action
+                    );
+                  }
+                })
+                .catch((error) => {
+                  console.error(
+                    `Error tracking purchase for product ${item.product.id}:`,
+                    error,
+                  );
+                });
             }
           }
         }

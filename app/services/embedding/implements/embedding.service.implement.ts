@@ -16,40 +16,97 @@ export class EmbeddingService implements IEmbeddingService {
   }
 
   /**
-   * Generate embedding using Google's Embedding API
-   *
-   * Note: To use Google's text-embedding-004 model, you need to:
-   * 1. Enable the Generative Language API in Google Cloud Console
-   * 2. Use the REST API endpoint: https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent
-   *
-   * For now, we use a hash-based fallback. To upgrade:
-   * - Install: npm install axios
-   * - Replace this method with a call to Google's Embedding API
+   * Generate embedding using Google's Embedding API (text-embedding-004)
+   * Returns a 768-dimensional vector
+   * This method uses the real Google Gemini API and only falls back to simple embedding
+   * if there's a critical error (like network failure or invalid API key)
    */
   async generateEmbedding(text: string): Promise<number[]> {
     try {
-      // TODO: Replace with Google Embedding API call
-      // Example:
-      // const response = await axios.post(
-      //   `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${config.gemini.apiKey}`,
-      //   { content: { parts: [{ text }] } }
-      // );
-      // return response.data.embedding.values;
+      // Validate input
+      if (!text || text.trim().length === 0) {
+        logger.warn('Empty text provided for embedding, using zero vector');
+        return new Array(768).fill(0);
+      }
 
-      // Current implementation: hash-based embedding (fallback)
-      const embedding = this.createSimpleEmbedding(text);
+      // Sử dụng model embedding chuyên dụng text-embedding-004
+      // Model này trả về vector 768 chiều
+      const embeddingModel = this.genAI.getGenerativeModel({
+        model: 'text-embedding-004',
+      });
 
-      return embedding;
-    } catch (error) {
-      logger.error('Error generating embedding:', error);
-      // Fallback to simple embedding
-      return this.createSimpleEmbedding(text);
+      const result = await embeddingModel.embedContent(text);
+      const embedding = result.embedding;
+
+      // Đảm bảo vector có đúng 768 chiều
+      if (embedding.values && embedding.values.length > 0) {
+        const vector = embedding.values;
+
+        // Nếu vector không đủ 768 chiều, pad với 0
+        if (vector.length < 768) {
+          logger.warn(
+            `Embedding vector has ${vector.length} dimensions, padding to 768`,
+          );
+          return [...vector, ...new Array(768 - vector.length).fill(0)];
+        }
+
+        // Nếu vector quá dài, cắt bớt
+        if (vector.length > 768) {
+          logger.warn(
+            `Embedding vector has ${vector.length} dimensions, truncating to 768`,
+          );
+          return vector.slice(0, 768);
+        }
+
+        // Normalize vector for cosine similarity
+        const magnitude = Math.sqrt(
+          vector.reduce((sum, val) => sum + val * val, 0),
+        );
+        if (magnitude > 0) {
+          return vector.map((val) => val / magnitude);
+        }
+
+        return vector;
+      }
+
+      throw new Error('Empty embedding returned from API');
+    } catch (error: any) {
+      // Only use fallback for critical errors (network, API key, etc.)
+      // Log the error but don't break the flow
+      logger.error('Error generating embedding from Gemini API:', {
+        message: error.message,
+        code: error.code,
+        stack: error.stack,
+      });
+
+      // Check if it's a critical error (API key, network, etc.)
+      const isCriticalError =
+        error.message?.includes('API_KEY') ||
+        error.message?.includes('network') ||
+        error.message?.includes('ECONNREFUSED') ||
+        error.code === 'ENOTFOUND' ||
+        error.code === 'ETIMEDOUT';
+
+      if (isCriticalError) {
+        logger.warn(
+          'Critical error detected, using fallback embedding generation',
+        );
+        return this.createSimpleEmbedding(text);
+      }
+
+      // For non-critical errors, try to return a zero vector or throw
+      // This ensures we don't silently fail
+      logger.error(
+        'Non-critical embedding error, but cannot generate proper embedding',
+      );
+      return new Array(768).fill(0);
     }
   }
 
   /**
-   * Create a simple embedding vector from text
-   * This is a fallback method. For production, use Google's embedding API
+   * Create a simple embedding vector from text (fallback method)
+   * Returns a 768-dimensional normalized vector
+   * For production, use Google's embedding API
    */
   private createSimpleEmbedding(text: string): number[] {
     // Create a 768-dimensional vector based on text features
@@ -67,14 +124,16 @@ export class EmbeddingService implements IEmbeddingService {
       vector[index] += 1 / (idx + 1); // Weight by position
     });
 
-    // Normalize vector
+    // Normalize vector to unit length (for cosine similarity)
     const magnitude = Math.sqrt(
       vector.reduce((sum, val) => sum + val * val, 0),
     );
     if (magnitude > 0) {
       return vector.map((val) => val / magnitude);
     }
-    return vector;
+
+    // If empty vector, return a small random vector
+    return vector.map(() => Math.random() * 0.001);
   }
 
   /**

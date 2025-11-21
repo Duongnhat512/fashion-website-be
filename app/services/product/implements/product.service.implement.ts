@@ -15,6 +15,9 @@ import { EmbeddingScheduler } from '../../../schedulers/embedding.scheduler';
 import { IWarehouseService } from '../../warehouse/warehouse.service.interface';
 import { WarehouseService } from '../../warehouse/implements/warehouse.service.implement';
 import InventoryRepository from '../../../repositories/inventory.repository';
+import redis from '../../../config/redis.config';
+import { IRecommendationService } from '../../recommendation/recommendation.service.interface';
+import { RecommendationService } from '../../recommendation/implements/recommendation.service.implement';
 
 export class ProductService implements IProductService {
   private readonly productRepository: ProductRepository;
@@ -22,6 +25,7 @@ export class ProductService implements IProductService {
   private readonly productCacheService: IProductCacheService;
   private readonly warehouseService: IWarehouseService;
   private readonly inventoryRepository: InventoryRepository;
+  private readonly recommendationService: IRecommendationService;
 
   constructor() {
     this.productRepository = new ProductRepository();
@@ -29,6 +33,7 @@ export class ProductService implements IProductService {
     this.productCacheService = new ProductCacheService();
     this.warehouseService = new WarehouseService();
     this.inventoryRepository = new InventoryRepository();
+    this.recommendationService = new RecommendationService();
   }
 
   async createProduct(product: ProductRequestDto): Promise<ProductResponseDto> {
@@ -224,7 +229,70 @@ export class ProductService implements IProductService {
     await Promise.all(inventoryPromises);
   }
 
-  async searchProductsByProductId(productId: string): Promise<ProductResponseDto[]> {
-    return this.redisSearchService.searchProductsByProductId(productId);
+  /**
+   * Search product by ID using Redis cache first, fallback to database if not found
+   * This provides fast cache access while ensuring data consistency
+   */
+  async searchProductsByProductId(
+    productId: string,
+  ): Promise<ProductResponseDto[]> {
+    try {
+      const cachedProducts =
+        await this.redisSearchService.searchProductsByProductId(productId);
+
+      if (cachedProducts && cachedProducts.length > 0) {
+        return cachedProducts;
+      }
+      const product = await this.productRepository.getProductById(productId);
+
+      await this.productCacheService.indexProduct(product);
+      return [product];
+    } catch (error) {
+      console.error(`Error searching product by ID ${productId}:`, error);
+      try {
+        const product = await this.productRepository.getProductById(productId);
+        return [product];
+      } catch {
+        return [];
+      }
+    }
+  }
+
+  async updateUserPreference(
+    userId: number,
+    productEmbedding: number[],
+    weight: number,
+  ): Promise<void> {
+    await this.recommendationService.updateUserPreference(
+      userId,
+      productEmbedding,
+      weight,
+    );
+  }
+
+  /**
+   * Get product embedding from Redis cache
+   */
+  async getProductEmbedding(productId: string): Promise<number[] | null> {
+    try {
+      const productKey = `product:${productId}`;
+      const embeddingBuffer = await redis.hgetBuffer(productKey, 'embedding');
+
+      if (!embeddingBuffer || embeddingBuffer.length !== 768 * 4) {
+        return null;
+      }
+
+      const alignedBuffer = Buffer.from(embeddingBuffer);
+
+      const float32Array = new Float32Array(
+        alignedBuffer.buffer,
+        alignedBuffer.byteOffset,
+        768,
+      );
+      return Array.from(float32Array);
+    } catch (error) {
+      console.error(`Error getting product embedding for ${productId}:`, error);
+      return null;
+    }
   }
 }

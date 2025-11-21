@@ -32,7 +32,10 @@ class CartService implements ICartService {
 
       return addedItem;
     } catch (error) {
-      throw new Error('Lỗi khi thêm sản phẩm vào giỏ hàng');
+      console.error('Error adding cart item:', error);
+      throw new Error(
+        error instanceof Error ? error.message : 'Lỗi khi thêm sản phẩm vào giỏ hàng',
+      );
     }
   }
 
