@@ -105,7 +105,6 @@ export class PromotionService implements IPromotionService {
 
   async submit(id: string): Promise<PromotionResponseDto> {
     const promotion = await this.repo.getById(id);
-
     if (promotion.status !== PromotionStatus.DRAFT) {
       throw new Error('Chỉ có thể submit promotion khi ở trạng thái DRAFT');
     }

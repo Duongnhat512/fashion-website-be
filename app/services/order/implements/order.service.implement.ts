@@ -64,7 +64,6 @@ export class OrderService implements IOrderService {
             await this.inventoryRepository.getInventoryByVariantId(
               item.variant.id,
             );
-
           let allocated = false;
           for (const c of candidates) {
             const inv = await this.inventoryRepository.getInventoryById(c.id);

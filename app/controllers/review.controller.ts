@@ -72,6 +72,27 @@ export class ReviewController {
     }
   }
 
+  async getAllReviews(req: Request, res: Response) {
+    try {
+      const page = req.query.page ? Number(req.query.page) : 1;
+      const limit = req.query.limit ? Number(req.query.limit) : 10;
+      const reviews = await this.reviewService.getAllReviews(page, limit);
+      return res
+        .status(200)
+        .json(ApiResponse.success('Danh sách tất cả đánh giá', reviews));
+    }
+    catch (error: any) {
+      return res.status(400).json(
+        ApiResponse.error(error.message || 'Lấy danh sách đánh giá thất bại', [
+          {
+            field: 'getAllReviews',
+            message: [error.message || 'Lấy danh sách đánh giá thất bại'],
+          },
+        ]),
+      );
+    }
+  }
+
   async updateReview(req: Request, res: Response) {
     let publicIds: string[] = [];
 
@@ -188,6 +209,38 @@ export class ReviewController {
           {
             field: 'getReviewsByProductId',
             message: [error.message || 'Lấy danh sách đánh giá thất bại'],
+          },
+        ]),
+      );
+    }
+  }
+
+  async mergeReviews(req: Request, res: Response) {
+    try {
+      const { reviewIds } = req.body;
+
+      if (!Array.isArray(reviewIds) || reviewIds.length < 2) {
+        throw new Error('Cần cung cấp ít nhất 2 review IDs');
+      }
+
+      const userId = req.user!.userId;
+      const userRole = req.user!.role;
+
+      const mergedReview = await this.reviewService.mergeReviews(
+        reviewIds,
+        userId,
+        userRole,
+      );
+
+      return res
+        .status(200)
+        .json(ApiResponse.success('Gộp đánh giá thành công', mergedReview));
+    } catch (error: any) {
+      return res.status(400).json(
+        ApiResponse.error(error.message || 'Gộp đánh giá thất bại', [
+          {
+            field: 'mergeReviews',
+            message: [error.message || 'Gộp đánh giá thất bại'],
           },
         ]),
       );

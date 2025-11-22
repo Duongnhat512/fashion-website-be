@@ -8,6 +8,10 @@ import {
 } from '../../dtos/response/review/review.response';
 
 export interface IReviewService {
+  getAllReviews(
+    page: number,
+    limit: number,
+  ): Promise<PaginatedReviewsResponseDto>;
   createReview(
     review: CreateReviewRequestDto,
     userId: string,
@@ -23,4 +27,9 @@ export interface IReviewService {
     page: number,
     limit: number,
   ): Promise<PaginatedReviewsResponseDto>;
+  mergeReviews(
+    reviewIds: string[],
+    userId: string,
+    userRole: string,
+  ): Promise<ReviewResponseDto>;
 }

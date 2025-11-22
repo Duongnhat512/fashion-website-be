@@ -60,13 +60,13 @@ router.get(
   checkOrderOwnership as RequestHandler,
   invoiceController.downloadInvoice,
 );
-router.get(
+router.post(
   '/invoices/batch',
   authenticatedUser,
   invoiceController.generateBatchInvoices,
 );
 
-router.get(
+router.post(
   '/invoices/batch/download',
   authenticatedUser,
   invoiceController.downloadBatchInvoices,

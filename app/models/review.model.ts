@@ -6,42 +6,48 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  OneToMany,
 } from 'typeorm';
 import { Product } from './product.model';
 import User from './user.model';
 
-@Entity({ name: 'reviews' })
+@Entity({ name: "reviews" })
 export class Review {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id!: string;
 
   @ManyToOne(() => Product, (product) => product.reviews)
-  @JoinColumn({ name: 'product_id' })
+  @JoinColumn({ name: "product_id" })
   product!: Product;
 
   @ManyToOne(() => User)
-  @JoinColumn({ name: 'user_id' })
+  @JoinColumn({ name: "user_id" })
   user!: User;
 
-  @Column({ type: 'int' })
+  @Column({ type: "int" })
   rating!: number;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: "text", nullable: true })
   comment?: string;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({ type: "jsonb", nullable: true })
   images?: string[];
 
-  @ManyToOne(() => Review, (review) => review.replyTo)
-  @JoinColumn({ name: 'reply_to_id' })
-  replyTo?: Review;
+  /** 👇 Quan hệ REPLY-TO */
+  @ManyToOne(() => Review, (review) => review.replies, { nullable: true })
+  @JoinColumn({ name: "reply_to_id" })
+  replyTo?: Review | null;
 
-  @Column({ type: 'boolean', default: false, name: 'is_verified' })
+  /** 👇 Quan hệ LIST REPLIES */
+  @OneToMany(() => Review, (review) => review.replyTo)
+  replies!: Review[];
+
+  @Column({ type: "boolean", default: false })
   isVerified!: boolean;
 
-  @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
+  @CreateDateColumn({ type: "timestamptz", name: "created_at" })
   createdAt!: Date;
 
-  @UpdateDateColumn({ type: 'timestamptz', name: 'updated_at' })
+  @UpdateDateColumn({ type: "timestamptz", name: "updated_at" })
   updatedAt!: Date;
 }
