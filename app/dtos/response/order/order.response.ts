@@ -2,6 +2,7 @@ import { OrderItem } from '../../../models/order_item.model';
 import User from '../../../models/user.model';
 import OrderStatus from '../../../models/enum/order_status.enum';
 import { OrderShippingAddress } from '../../../models/order_shipping_address.model';
+import { PaginationResponseDto } from '../pagination.response.dto';
 
 export class OrderResponseDto {
   id: string;
@@ -16,4 +17,9 @@ export class OrderResponseDto {
   items: OrderItem[];
   shippingAddress: OrderShippingAddress;
   isCOD: boolean;
+}
+
+export class PaginatedOrdersResponseDto {
+  orders: OrderResponseDto[];
+  pagination: PaginationResponseDto;
 }

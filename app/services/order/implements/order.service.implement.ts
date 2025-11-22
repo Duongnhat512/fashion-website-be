@@ -3,7 +3,7 @@ import {
   CreateOrderRequestDto,
   UpdateOrderRequestDto,
 } from '../../../dtos/request/order/order.request';
-import { OrderResponseDto } from '../../../dtos/response/order/order.response';
+import { OrderResponseDto, PaginatedOrdersResponseDto } from '../../../dtos/response/order/order.response';
 import { OrderRepository } from '../../../repositories/order.repository';
 import { IOrderService } from '../order.service.interface';
 import { AppDataSource } from '../../../config/data_source';
@@ -51,7 +51,7 @@ export class OrderService implements IOrderService {
     return this.orderRepository.getOrderById(id);
   }
 
-  async getAllOrders(page: number, limit: number): Promise<OrderResponseDto[]> {
+  async getAllOrders(page: number, limit: number): Promise<PaginatedOrdersResponseDto> {
     return this.orderRepository.getAllOrders(page, limit);
   }
 
@@ -269,8 +269,12 @@ export class OrderService implements IOrderService {
     return order;
   }
 
-  async getOrdersByUserId(userId: string): Promise<OrderResponseDto[]> {
-    return this.orderRepository.getOrdersByUserId(userId);
+  async getOrdersByUserId(
+    userId: string,
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<PaginatedOrdersResponseDto> {
+    return this.orderRepository.getOrdersByUserId(userId, page, limit);
   }
 
   getOrderStatusPriority(status: OrderStatus): number {

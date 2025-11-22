@@ -3,7 +3,10 @@ import {
   CreateOrderRequestDto,
   UpdateOrderRequestDto,
 } from '../dtos/request/order/order.request';
-import { OrderResponseDto } from '../dtos/response/order/order.response';
+import {
+  OrderResponseDto,
+  PaginatedOrdersResponseDto,
+} from '../dtos/response/order/order.response';
 import { Order } from '../models/order.model';
 import { AppDataSource } from '../config/data_source';
 
@@ -53,8 +56,8 @@ export class OrderRepository {
   async getAllOrders(
     page: number = 1,
     limit: number = 10,
-  ): Promise<OrderResponseDto[]> {
-    const orders = await this.orderRepository.find({
+  ): Promise<PaginatedOrdersResponseDto> {
+    const [orders, total] = await this.orderRepository.findAndCount({
       skip: (page - 1) * limit,
       take: limit,
       relations: {
@@ -69,11 +72,25 @@ export class OrderRepository {
       },
       order: { createdAt: 'DESC' },
     });
-    return orders as unknown as OrderResponseDto[];
+    return {
+      orders: orders.map((order) => order as unknown as OrderResponseDto),
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        hasNext: page * limit < total,
+        hasPrev: page > 1,
+      },
+    };
   }
 
-  async getOrdersByUserId(userId: string): Promise<OrderResponseDto[]> {
-    const orders = await this.orderRepository.find({
+  async getOrdersByUserId(
+    userId: string,
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<PaginatedOrdersResponseDto> {
+    const [orders, total] = await this.orderRepository.findAndCount({
       where: { user: { id: userId } },
       relations: {
         user: true,
@@ -87,6 +104,16 @@ export class OrderRepository {
       },
       order: { createdAt: 'DESC' },
     });
-    return orders as unknown as OrderResponseDto[];
+    return {
+      orders: orders.map((order) => order as unknown as OrderResponseDto),
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        hasNext: page * limit < total,
+        hasPrev: page > 1,
+      },
+    };
   }
 }
