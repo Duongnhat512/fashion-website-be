@@ -91,6 +91,13 @@ export class ProductService implements IProductService {
     try {
       updatedProduct = await this.productRepository.getProductById(product.id);
       await this.productCacheService.indexProduct(updatedProduct);
+      const embeddingScheduler = new EmbeddingScheduler();
+      embeddingScheduler.generateProductEmbedding(product.id).catch((error) => {
+        console.error(
+          'Error regenerating embedding for updated product:',
+          error,
+        );
+      });
     } catch (error) {
       console.error('Error updating product index:', error);
     }

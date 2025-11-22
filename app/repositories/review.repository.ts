@@ -61,15 +61,10 @@ export class ReviewRepository {
       where: { replyTo: { id: reviewId } },
     });
 
-    if (replies.length > 0) {
-      console.log(`Found ${replies.length} replies for review ${reviewId}`);
-    }
-
     for (const reply of replies) {
       // Recursively delete replies of replies (nested replies)
       await this.deleteReviewReplies(reply.id);
       await this.reviewRepository.delete(reply.id);
-      console.log(`Deleted reply ${reply.id}`);
     }
   }
 
