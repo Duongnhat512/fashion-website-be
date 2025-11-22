@@ -232,8 +232,12 @@ export class OrderController {
 
   getOrdersByUserId = async (req: Request, res: Response) => {
     try {
+      const { page = 1, limit = 10 } = req.query;
+
       const orders = await this.orderService.getOrdersByUserId(
         req.params.userId,
+        Number(page),
+        Number(limit),
       );
       res.status(200).json(ApiResponse.success('Danh sách đơn hàng', orders));
     } catch (error) {

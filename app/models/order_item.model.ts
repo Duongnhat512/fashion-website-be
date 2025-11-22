@@ -15,8 +15,8 @@ import { Warehouse } from './warehouse.model';
 
 @Entity('order_items')
 export class OrderItem {
-  @PrimaryGeneratedColumn()
-  id!: string;
+  @PrimaryGeneratedColumn('uuid')
+  id!: number;
 
   @ManyToOne(() => Order, (order) => order.items, {
     onDelete: 'CASCADE',

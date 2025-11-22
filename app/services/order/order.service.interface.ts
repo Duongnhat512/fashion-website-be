@@ -2,7 +2,10 @@ import {
   CreateOrderRequestDto,
   UpdateOrderRequestDto,
 } from '../../dtos/request/order/order.request';
-import { OrderResponseDto } from '../../dtos/response/order/order.response';
+import {
+  PaginatedOrdersResponseDto,
+  OrderResponseDto,
+} from '../../dtos/response/order/order.response';
 import OrderStatus from '../../models/enum/order_status.enum';
 
 export interface IOrderService {
@@ -10,11 +13,18 @@ export interface IOrderService {
   updateOrder(order: UpdateOrderRequestDto): Promise<OrderResponseDto>;
   deleteOrder(id: string): Promise<string>;
   getOrderById(id: string): Promise<OrderResponseDto>;
-  getAllOrders(page: number, limit: number): Promise<OrderResponseDto[]>;
+  getAllOrders(
+    page: number,
+    limit: number,
+  ): Promise<PaginatedOrdersResponseDto>;
   cancelOrder(orderId: string): Promise<void>;
   updateOrderStatus(
     orderId: string,
     status: OrderStatus,
   ): Promise<OrderResponseDto>;
-  getOrdersByUserId(userId: string): Promise<OrderResponseDto[]>;
+  getOrdersByUserId(
+    userId: string,
+    page: number,
+    limit: number,
+  ): Promise<PaginatedOrdersResponseDto>;
 }
