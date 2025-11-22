@@ -751,6 +751,7 @@ export class ChatbotService implements IChatbotService {
             products: result.products.slice(0, 5).map((p: any) => ({
               id: p.id,
               name: p.name,
+              slug: p.slug,
               imageUrl: p.imageUrl,
               // Only keep essential variant info - flatten everything
               variants: (p.variants || []).slice(0, 3).map((v: any) => ({
@@ -821,6 +822,7 @@ export class ChatbotService implements IChatbotService {
       id: p.id,
       name: p.name,
       imageUrl: p.imageUrl,
+      slug: p.slug,
       price: p.variants?.[0]?.price || 0,
       variants: (p.variants || []).map((v: any) => ({
         id: v.id,

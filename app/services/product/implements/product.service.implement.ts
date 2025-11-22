@@ -82,7 +82,7 @@ export class ProductService implements IProductService {
     return newProduct;
   }
 
-  async updateProduct(
+    async updateProduct(
     product: UpdateProductRequestDto,
   ): Promise<ProductResponseDto> {
     await this.productRepository.updateProduct(product);
@@ -91,8 +91,6 @@ export class ProductService implements IProductService {
     try {
       updatedProduct = await this.productRepository.getProductById(product.id);
       await this.productCacheService.indexProduct(updatedProduct);
-
-      // Regenerate embedding for updated product (async, don't wait)
       const embeddingScheduler = new EmbeddingScheduler();
       embeddingScheduler.generateProductEmbedding(product.id).catch((error) => {
         console.error(
