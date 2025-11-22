@@ -14,6 +14,7 @@ import User from './user.model';
 import OrderStatus from './enum/order_status.enum';
 import { OrderItem } from './order_item.model';
 import { OrderShippingAddress } from './order_shipping_address.model';
+import { PaymentMethod } from './enum/payment_method.enum';
 
 @Entity('orders')
 export class Order {
@@ -38,6 +39,14 @@ export class Order {
 
   @Column({ type: 'double precision', name: 'total_amount' })
   totalAmount: number;
+
+  @Column({
+    type: 'enum',
+    enum: PaymentMethod,
+    default: PaymentMethod.CASH,
+    name: 'payment_method',
+  })
+  paymentMethod: PaymentMethod;
 
   @Column({ type: 'double precision', name: 'shipping_fee' })
   shippingFee: number;

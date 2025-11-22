@@ -1,12 +1,8 @@
-import crypto from 'crypto';
-import querystring from 'qs';
 import { config } from '../../../config/env';
 import {
   IPaymentService,
   CreatePaymentUrlRequest,
   CreatePaymentUrlResponse,
-  PaymentReturnRequest,
-  PaymentReturnResponse,
   PaymentRedirectRequest,
   PaymentRedirectResponse,
 } from '../payment.service.interface';
@@ -21,6 +17,8 @@ import {
   VnpLocale,
   dateFormat,
 } from 'vnpay';
+import { PaymentMethod } from '../../../models/enum/payment_method.enum';
+import { UpdateOrderRequestDto } from '../../../dtos/request/order/order.request';
 
 export class VNPayService implements IPaymentService {
   private tmnCode: string;
@@ -118,10 +116,11 @@ export class VNPayService implements IPaymentService {
         };
       }
 
-      await this.orderService.updateOrderStatus(
-        vnpayResponse.vnp_TxnRef,
-        OrderStatus.PENDING,
-      );
+      await this.orderService.updateOrder({
+        id: vnpayResponse.vnp_TxnRef,
+        status: OrderStatus.PENDING,
+        paymentMethod: PaymentMethod.BANK,
+      } as UpdateOrderRequestDto);
 
       return {
         success: true,

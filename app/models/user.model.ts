@@ -52,6 +52,9 @@ export default class User {
   })
   refreshToken!: string;
 
+  @Column({ type: 'varchar', length: 50, nullable: true, name: 'tax_code' })
+  taxCode!: string;
+
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt!: Date;
 

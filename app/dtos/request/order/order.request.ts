@@ -17,6 +17,7 @@ import {
 import { Type } from 'class-transformer';
 import { CreateOrderShippingAddressRequestDto } from './order_shipping_address.request';
 import { CreateOrderItemRequestDto } from './order_item.request';
+import { PaymentMethod } from '../../../models/enum/payment_method.enum';
 
 // ... existing code ...
 
@@ -120,4 +121,10 @@ export class UpdateOrderRequestDto {
       'Thông tin địa chỉ giao hàng không hợp lệ, vui lòng kiểm tra lại các trường bên trong',
   })
   shippingAddress: OrderShippingAddress;
+
+  @IsOptional()
+  @IsEnum(PaymentMethod, {
+    message: 'Phương thức thanh toán không hợp lệ',
+  })
+  paymentMethod?: PaymentMethod;
 }

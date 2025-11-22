@@ -3,10 +3,12 @@ import { Product } from '../../../models/product.model';
 import { Variant } from '../../../models/variant.model';
 
 export class CreateOrderItemRequestDto {
-  @IsObject()
+  @IsObject({ message: 'Thông tin sản phẩm không hợp lệ' })
   product!: Product;
 
-  @IsObject()
+  @IsObject({
+    message: 'Thông tin variant (màu sắc/kích thước) không được để trống',
+  })
   variant!: Variant;
 
   @IsNumber({}, { message: 'Số lượng phải là số' })
