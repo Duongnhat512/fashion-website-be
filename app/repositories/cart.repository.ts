@@ -22,7 +22,9 @@ class CartRepository {
         user: true,
         cartItems: {
           product: true,
-          variant: true,
+          variant: {
+            color: true,
+          },
         },
       },
     });
@@ -35,7 +37,9 @@ class CartRepository {
         user: true,
         cartItems: {
           product: true,
-          variant: true,
+          variant: {
+            color: true,
+          },
         },
       },
     });

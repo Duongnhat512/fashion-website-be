@@ -826,8 +826,12 @@ export class ChatbotService implements IChatbotService {
       price: p.variants?.[0]?.price || 0,
       variants: (p.variants || []).map((v: any) => ({
         id: v.id,
-        color:
-          typeof v.color === 'object' ? v.color?.name || '' : v.color || '',
+        color: {
+          id: v.color.id,
+          name: v.color.name,
+          code: v.color.code,
+          hex: v.color.hex,
+        },
         size: v.size || '',
         price: v.price || 0,
         availableQuantity: v.availableQuantity || 0,
