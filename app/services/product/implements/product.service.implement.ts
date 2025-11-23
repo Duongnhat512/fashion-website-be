@@ -82,7 +82,7 @@ export class ProductService implements IProductService {
     return newProduct;
   }
 
-    async updateProduct(
+  async updateProduct(
     product: UpdateProductRequestDto,
   ): Promise<ProductResponseDto> {
     await this.productRepository.updateProduct(product);
@@ -301,5 +301,14 @@ export class ProductService implements IProductService {
       console.error(`Error getting product embedding for ${productId}:`, error);
       return null;
     }
+  }
+
+  async getProductByVariantId(
+    variantId: string,
+  ): Promise<ProductResponseDto | null> {
+    const product = await this.productRepository.getProductByVariantId(
+      variantId,
+    );
+    return product;
   }
 }

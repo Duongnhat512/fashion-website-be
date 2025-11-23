@@ -288,4 +288,23 @@ export class ProductRepository {
 
     return this.getProductById(product.id!);
   }
+
+  async getProductByVariantId(
+    variantId: string,
+  ): Promise<ProductResponseDto | null> {
+    const product = await this.productRepository.findOne({
+      where: { variants: { id: variantId } },
+      relations: {
+        category: true,
+      },
+    });
+    if (!product) {
+      return null;
+    }
+    return {
+      ...product,
+      categoryId: product.category?.id,
+      brand: product.brand ?? '',
+    };
+  }
 }

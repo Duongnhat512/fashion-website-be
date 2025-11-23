@@ -35,4 +35,5 @@ export interface IProductService {
     weight: number,
   ): Promise<void>;
   getProductEmbedding(productId: string): Promise<number[] | null>;
+  getProductByVariantId(variantId: string): Promise<ProductResponseDto | null>;
 }

@@ -23,6 +23,7 @@ import redis from '../../../config/redis.config';
 import InventoryRepository from '../../../repositories/inventory.repository';
 import { IVariantService } from '../../product/variant.service.interface';
 import { VariantService } from '../../product/implements/variant.service.implement';
+import OrderStatus from '../../../models/enum/order_status.enum';
 
 export class ChatbotService implements IChatbotService {
   private genAI: GoogleGenerativeAI;
@@ -54,35 +55,51 @@ export class ChatbotService implements IChatbotService {
         Bạn là một trợ lý bán hàng thời trang thông minh, thân thiện của cửa hàng.
         Nhiệm vụ: Tìm kiếm sản phẩm, tư vấn size/màu và hỗ trợ đặt hàng (Function Calling).
         
-        QUY TẮC BẮT DI BẤT DỊCH:
+        QUY TẮC BẤT DI BẤT DỊCH:
         
         0. KHI NÀO GỌI HÀM:
-          - Khi khách hỏi về sản phẩm ("tìm", "có", "xem", "mua", v.v.) -> GỌI NGAY searchProducts
-          - Khi khách muốn thêm vào giỏ -> GỌI addToCart
-          - Khi khách muốn đặt hàng -> GỌI createOrder
-          - KHÔNG TỰ Ý TRẢ LỜI mà không gọi hàm khi khách hỏi về sản phẩm.
+            - Khi khách hỏi về sản phẩm ("tìm", "có", "xem", "mua", v.v.) -> GỌI NGAY searchProducts
+            - Khi khách muốn thêm vào giỏ -> GỌI addToCart
+            - Khi khách muốn đặt hàng -> GỌI createOrder
+            - KHÔNG TỰ Ý TRẢ LỜI mà không gọi hàm khi khách hỏi về sản phẩm.
+        
         1. ID VÀ DỮ LIỆU:
-          - TUYỆT ĐỐI KHÔNG tự bịa ra 'productId' hoặc 'variantId'. Chỉ sử dụng ID từ kết quả của hàm 'searchProducts' hoặc lịch sử hội thoại.
-          - Nếu không tìm thấy sản phẩm trong dữ liệu, hãy xin lỗi và gợi ý từ khóa khác.
+            - TUYỆT ĐỐI KHÔNG tự bịa ra 'productId' hoặc 'variantId'. 
+            - CHỈ sử dụng ID từ kết quả của hàm 'searchProducts' (trong response.products[].id và response.products[].variants[].id).
+            - KHÔNG được tự tạo ID hoặc đoán ID dựa trên tên sản phẩm.
+            - KHÔNG được lấy ID từ lịch sử hội thoại cũ nếu không chắc chắn nó còn hợp lệ.
+            - Nếu không có ID chính xác từ function result -> HÃY HỎI KHÁCH HÀNG chọn lại từ danh sách hoặc gọi lại searchProducts.
+            - Nếu không tìm thấy sản phẩm trong dữ liệu, hãy xin lỗi và gợi ý từ khóa khác.
     
         2. QUY TRÌNH THÊM GIỎ HÀNG (addToCart):
-          - Khi khách nói "mua cái này", "lấy màu xanh": PHẢI kiểm tra xem sản phẩm đó có cần chọn Size/Màu không.
-          - Nếu thiếu Size/Màu -> HỎI KHÁCH HÀNG (VD: "Dạ mẫu này bên em còn size M và L, bạn lấy size nào ạ?").
-          - Chỉ gọi 'addToCart' khi đã xác định được CHÍNH XÁC 'variantId' tương ứng.
+            - Khi khách nói "mua cái này", "lấy màu xanh": PHẢI kiểm tra xem sản phẩm đó có cần chọn Size/Màu không.
+            - Nếu thiếu Size/Màu -> HỎI KHÁCH HÀNG (VD: "Dạ mẫu này bên em còn size M và L, bạn lấy size nào ạ?").
+            - Chỉ gọi 'addToCart' khi bạn đã xác định được CHÍNH XÁC 'variantId' từ kết quả 'searchProducts' gần nhất (KHÔNG được tự tạo).
+            - Nếu không chắc chắn về variantId, hãy gọi lại searchProducts để lấy danh sách mới nhất.
     
         3. QUY TRÌNH TẠO ĐƠN (createOrder):
-          - Để đặt hàng, BẮT BUỘC phải có đủ: Tên, SĐT, và Địa chỉ chi tiết.
-          - Về ĐỊA CHỈ: Hệ thống cần 3 cấp hành chính riêng biệt. Hãy hỏi hoặc trích xuất rõ ràng:
-            + Tỉnh/Thành phố (city)
-            + Quận/Huyện (district)
-            + Phường/Xã (ward)
-            + Số nhà/Đường (fullAddress)
-          - Nếu khách chỉ nói "Ở Hà Nội", hãy hỏi thêm Quận, Phường và địa chỉ cụ thể.
+            - Để đặt hàng, BẮT BUỘC phải có đủ: Tên, SĐT, và Địa chỉ chi tiết.
+            - Về ĐỊA CHỈ: Hệ thống cần 3 cấp hành chính riêng biệt. Hãy hỏi hoặc trích xuất rõ ràng:
+              + Tỉnh/Thành phố (city)
+              + Quận/Huyện (district)
+              + Phường/Xã (ward)
+              + Số nhà/Đường (fullAddress)
+            - Nếu khách chỉ nói "Ở Hà Nội", hãy hỏi thêm Quận, Phường và địa chỉ cụ thể.
     
-        4. PHONG CÁCH:
-          - Trả lời ngắn gọn, súc tích, không văn vở dài dòng.
-          - Xưng hô: "Dạ/mình" hoặc "em/anh/chị" tùy ngữ cảnh, luôn lịch sự.
-          - Luôn gợi mở để khách mua thêm hàng.
+        4. CÁCH TRÌNH BÀY THÔNG TIN SẢN PHẨM (QUAN TRỌNG):
+            - Khi liệt kê màu và size, PHẢI trình bày theo từng CẶP (màu + size) cụ thể.
+            - KHÔNG được nói "có các màu: X, Y, Z và các size: M, L, XL" vì gây hiểu nhầm.
+            - THAY VÀO ĐÓ, hãy nói: "Bên em có các lựa chọn sau:
+              • Màu Đen - Size M
+              • Màu Cổ vịt - Size L
+              • Màu Ghi Sáng - Size XL"
+            - Hoặc nếu có nhiều size cho cùng một màu: "Màu Đen có size M, L, XL. Màu Cổ vịt có size L, XL."
+            - Luôn liệt kê CHÍNH XÁC từng variant có sẵn, không được suy đoán.
+    
+        5. PHONG CÁCH:
+            - Trả lời ngắn gọn, súc tích, không văn vở dài dòng.
+            - Xưng hô: "Dạ/mình" hoặc "em/anh/chị" tùy ngữ cảnh, luôn lịch sự.
+            - Luôn gợi mở để khách mua thêm hàng.
       `,
       tools: [
         {
@@ -432,12 +449,11 @@ export class ChatbotService implements IChatbotService {
               }
 
               // Get embedding from Redis
-              const embeddingKey = `product:${product.id}`;
-              const embeddingJson = await redis.hget(embeddingKey, 'embedding');
+              const productEmbedding =
+                await this.productService.getProductEmbedding(product.id);
 
-              if (embeddingJson) {
+              if (productEmbedding && productEmbedding.length === 768) {
                 try {
-                  const productEmbedding = JSON.parse(embeddingJson);
                   const similarity = this.embeddingService.cosineSimilarity(
                     queryEmbedding,
                     productEmbedding,
@@ -445,7 +461,7 @@ export class ChatbotService implements IChatbotService {
                   return { product: filteredProduct, similarity };
                 } catch (error) {
                   logger.error(
-                    `Error parsing embedding for product ${product.id}:`,
+                    `Error calculating similarity for product ${product.id}:`,
                     error,
                   );
                 }
@@ -550,6 +566,56 @@ export class ChatbotService implements IChatbotService {
     const { productId, variantId, quantity = 1 } = args;
 
     try {
+      // VALIDATION: Kiểm tra input
+      if (!variantId || !productId) {
+        logger.warn(
+          `Missing required fields - productId: ${productId}, variantId: ${variantId}`,
+        );
+        return {
+          success: false,
+          error:
+            'Thiếu thông tin sản phẩm hoặc biến thể. Vui lòng chọn lại sản phẩm từ danh sách.',
+        };
+      }
+
+      // VALIDATION: Kiểm tra variant có tồn tại không
+      let variant;
+      try {
+        variant = await this.variantService.getVariantById(variantId);
+      } catch (error) {
+        logger.error(`Error fetching variant ${variantId}:`, error);
+        return {
+          success: false,
+          error:
+            'Biến thể sản phẩm không tồn tại. Vui lòng chọn lại sản phẩm từ danh sách.',
+        };
+      }
+
+      if (!variant) {
+        logger.warn(`Variant ${variantId} not found in database`);
+        return {
+          success: false,
+          error:
+            'Biến thể sản phẩm không tồn tại. Vui lòng chọn lại sản phẩm từ danh sách.',
+        };
+      }
+
+      // VALIDATION: Kiểm tra variant thuộc về product đúng không
+      // Cần query variant với product relation để kiểm tra
+      const product = await this.productService.getProductByVariantId(
+        variantId,
+      );
+      if (product?.id !== productId) {
+        logger.warn(
+          `Variant ${variantId} (product: ${variant?.product?.id}) does not belong to product ${productId}`,
+        );
+        return {
+          success: false,
+          error:
+            'Sản phẩm và biến thể không khớp. Vui lòng chọn lại sản phẩm từ danh sách.',
+        };
+      }
+
       // Get user's cart
       let cart;
       try {
@@ -634,7 +700,7 @@ export class ChatbotService implements IChatbotService {
       // Create order
       const order = await this.orderService.createOrder({
         user: { id: userId } as any,
-        status: 'UNPAID' as any,
+        status: OrderStatus.UNPAID as any,
         items: orderItems as any,
         shippingAddress: {
           fullName,
@@ -835,6 +901,7 @@ export class ChatbotService implements IChatbotService {
         size: v.size || '',
         price: v.price || 0,
         availableQuantity: v.availableQuantity || 0,
+        imageUrl: v.imageUrl || '',
       })),
     }));
   }
