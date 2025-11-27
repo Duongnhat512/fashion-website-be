@@ -15,6 +15,7 @@ import OrderStatus from './enum/order_status.enum';
 import { OrderItem } from './order_item.model';
 import { OrderShippingAddress } from './order_shipping_address.model';
 import { PaymentMethod } from './enum/payment_method.enum';
+import { Voucher } from './voucher.model';
 
 @Entity('orders')
 export class Order {
@@ -50,6 +51,13 @@ export class Order {
 
   @Column({ type: 'double precision', name: 'shipping_fee' })
   shippingFee: number;
+
+  @ManyToOne(() => Voucher, (voucher) => voucher.orders, { nullable: true })
+  @JoinColumn({ name: 'voucher_id' })
+  voucher?: Voucher | null;
+
+  @Column({ type: 'varchar', length: 50, name: 'voucher_code', nullable: true })
+  voucherCode?: string | null;
 
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt: Date;

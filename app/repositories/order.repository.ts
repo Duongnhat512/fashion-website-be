@@ -48,6 +48,7 @@ export class OrderRepository {
           },
         },
         shippingAddress: true,
+        voucher: true,
       },
     });
     return order as unknown as OrderResponseDto;
@@ -69,6 +70,7 @@ export class OrderRepository {
           },
         },
         shippingAddress: true,
+        voucher: true,
       },
       order: { createdAt: 'DESC' },
     });
@@ -101,6 +103,7 @@ export class OrderRepository {
           },
         },
         shippingAddress: true,
+        voucher: true,
       },
       order: { createdAt: 'DESC' },
     });

@@ -29,10 +29,13 @@ export class OrderController {
     try {
       const createOrderDto = new CreateOrderRequestDto();
       Object.assign(createOrderDto, {
-        status: req.body.status,
-        discount: req.body.discount,
-        shippingFee: req.body.shippingFee,
-        isCOD: req.body.isCOD,
+        status: req.body.status ?? OrderStatus.UNPAID,
+        discount: req.body.discount ?? 0,
+        shippingFee: req.body.shippingFee ?? 0,
+        isCOD: req.body.isCOD ?? false,
+        voucherCode: req.body.voucherCode
+          ? String(req.body.voucherCode).trim().toUpperCase()
+          : undefined,
       });
 
       createOrderDto.user = { id: req.body.user.id } as User;

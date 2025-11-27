@@ -39,6 +39,7 @@ import reviewRouter from './routers/review.route';
 import chatbotRouter from './routers/chatbot.route';
 import conversationRouter from './routers/conversation.route';
 import taxReportRouter from './routers/tax_report.route';
+import voucherRouter from './routers/voucher.route';
 
 const app: Application = express();
 
@@ -159,6 +160,7 @@ app.use(`${apiVersion}/reviews`, reviewRouter);
 app.use(`${apiVersion}/chatbot`, chatbotRouter);
 app.use(`${apiVersion}/conversations`, conversationRouter);
 app.use(`${apiVersion}/reports/tax`, taxReportRouter);
+app.use(`${apiVersion}/vouchers`, voucherRouter);
 
 // 404 handler
 app.use('*', (req, res) => {

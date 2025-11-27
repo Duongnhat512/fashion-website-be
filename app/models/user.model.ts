@@ -11,6 +11,7 @@ import Role from './enum/role.enum';
 import { Order } from './order.model';
 import Address from './address.model';
 import Cart from './cart.model';
+import { VoucherUsage } from './voucher_usage.model';
 
 @Entity({ name: 'users' })
 export default class User {
@@ -69,4 +70,7 @@ export default class User {
 
   @OneToMany(() => Cart, (cart) => cart.user)
   carts: Cart[];
+
+  @OneToMany(() => VoucherUsage, (usage) => usage.user)
+  voucherUsages?: VoucherUsage[];
 }

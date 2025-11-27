@@ -22,6 +22,8 @@ import { Review } from '../models/review.model';
 import { Conversation } from '../models/conversation.model';
 import { ChatMessage } from '../models/chat_message.model';
 import { ConversationRead } from '../models/conversation_read.model';
+import { Voucher } from '../models/voucher.model';
+import { VoucherUsage } from '../models/voucher_usage.model';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -52,6 +54,8 @@ export const AppDataSource = new DataSource({
     Conversation,
     ChatMessage,
     ConversationRead,
+    Voucher,
+    VoucherUsage,
   ],
   synchronize: true,
   logging: false,

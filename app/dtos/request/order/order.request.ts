@@ -18,6 +18,7 @@ import { Type } from 'class-transformer';
 import { CreateOrderShippingAddressRequestDto } from './order_shipping_address.request';
 import { CreateOrderItemRequestDto } from './order_item.request';
 import { PaymentMethod } from '../../../models/enum/payment_method.enum';
+import { Voucher } from '../../../models/voucher.model';
 
 // ... existing code ...
 
@@ -68,6 +69,12 @@ export class CreateOrderRequestDto {
 
   subTotal?: number;
   totalAmount?: number;
+
+  @IsOptional()
+  @IsString({ message: 'Mã voucher phải là chuỗi hợp lệ' })
+  voucherCode?: string;
+
+  voucher?: Voucher;
 }
 
 export class UpdateOrderRequestDto {
