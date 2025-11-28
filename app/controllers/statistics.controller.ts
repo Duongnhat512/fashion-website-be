@@ -364,4 +364,50 @@ export class StatisticsController {
         );
     }
   };
+
+  // Revenue forecast using AI
+  generateRevenueForecast = async (
+    req: Request,
+    res: Response,
+  ): Promise<void> => {
+    try {
+      const { period, startDate, endDate } = req.query;
+
+      // Validate period
+      if (
+        period &&
+        !['week', 'month', 'quarter', 'year'].includes(period as string)
+      ) {
+        res
+          .status(400)
+          .json(
+            ApiResponse.error(
+              'Period phải là: week, month, quarter hoặc year',
+            ),
+          );
+        return;
+      }
+
+      const start = startDate ? new Date(startDate as string) : undefined;
+      const end = endDate ? new Date(endDate as string) : undefined;
+
+      const forecast = await this.statisticsService.generateRevenueForecast(
+        (period as 'week' | 'month' | 'quarter' | 'year') || 'month',
+        start,
+        end,
+      );
+
+      res
+        .status(200)
+        .json(ApiResponse.success('Dự báo doanh thu', forecast));
+    } catch (error) {
+      res
+        .status(500)
+        .json(
+          ApiResponse.serverError(
+            error instanceof Error ? error.message : 'Lỗi server',
+          ),
+        );
+    }
+  };
 }

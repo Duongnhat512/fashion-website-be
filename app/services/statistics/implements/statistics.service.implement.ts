@@ -1,11 +1,14 @@
 import { IStatisticsService } from '../statistics.service.interface';
 import { StatisticsRepository } from '../../../repositories/statistics.repository';
+import { RevenueForecastService } from '../../revenue_forecast/implements/revenue_forecast.service.implement';
 
 export class StatisticsService implements IStatisticsService {
   private readonly statisticsRepository: StatisticsRepository;
+  private readonly revenueForecastService: RevenueForecastService;
 
   constructor() {
     this.statisticsRepository = new StatisticsRepository();
+    this.revenueForecastService = new RevenueForecastService();
   }
 
   async getDashboardStats(
@@ -178,6 +181,18 @@ export class StatisticsService implements IStatisticsService {
     Array<{ date: string; profit: number; revenue: number; cost: number }>
   > {
     return this.statisticsRepository.getProfitTimeSeries(
+      period,
+      startDate,
+      endDate,
+    );
+  }
+
+  async generateRevenueForecast(
+    period: 'week' | 'month' | 'quarter' | 'year',
+    startDate?: Date,
+    endDate?: Date,
+  ): Promise<any> {
+    return this.revenueForecastService.generateForecast(
       period,
       startDate,
       endDate,

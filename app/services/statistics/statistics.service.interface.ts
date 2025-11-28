@@ -82,4 +82,13 @@ export interface IStatisticsService {
   ): Promise<
     Array<{ date: string; profit: number; revenue: number; cost: number }>
   >;
+
+  /**
+   * Generate revenue forecast using AI
+   */
+  generateRevenueForecast(
+    period: 'week' | 'month' | 'quarter' | 'year',
+    startDate?: Date,
+    endDate?: Date,
+  ): Promise<any>;
 }

@@ -59,6 +59,12 @@ router.get(
   statisticsController.getProfitTimeSeries,
 );
 
+router.get(
+  '/revenue/forecast',
+  adminOnly,
+  statisticsController.generateRevenueForecast,
+);
+
 router.get('/orders', adminOnly, statisticsController.getOrderStatistics);
 
 export default router;
