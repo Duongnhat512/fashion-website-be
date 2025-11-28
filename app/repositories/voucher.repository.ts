@@ -182,6 +182,17 @@ export class VoucherRepository {
       });
     }
 
+    if (params.userId) {
+      // Left join with VoucherUsage for the user
+      qb.leftJoin('voucher.usages', 'usage', 'usage.user.id = :userId', { userId: params.userId });
+
+      // Filter where usageLimitPerUser is null or user's usage count < usageLimitPerUser
+      qb.andWhere('(voucher.usageLimitPerUser IS NULL OR COALESCE(usage.usageCount, 0) < voucher.usageLimitPerUser)');
+
+      // Filter where usageLimit is null or voucher's usedCount < usageLimit
+      qb.andWhere('(voucher.usageLimit IS NULL OR voucher.usedCount < voucher.usageLimit)');
+    }
+
     qb.orderBy('voucher.createdAt', 'DESC')
       .skip((page - 1) * limit)
       .take(limit);
