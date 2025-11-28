@@ -3,7 +3,10 @@ import {
   CreateOrderRequestDto,
   UpdateOrderRequestDto,
 } from '../../../dtos/request/order/order.request';
-import { OrderResponseDto, PaginatedOrdersResponseDto } from '../../../dtos/response/order/order.response';
+import {
+  OrderResponseDto,
+  PaginatedOrdersResponseDto,
+} from '../../../dtos/response/order/order.response';
 import { OrderRepository } from '../../../repositories/order.repository';
 import { IOrderService } from '../order.service.interface';
 import { AppDataSource } from '../../../config/data_source';
@@ -16,6 +19,11 @@ import CartItemRequestDto from '../../../dtos/request/cart/cart_item.request';
 import { IProductCacheService } from '../../product/product_cache.service.interface';
 import { ProductCacheService } from '../../product/implements/product_cache.service.implement';
 import { RecommendationService } from '../../recommendation/implements/recommendation.service.implement';
+import { IVoucherService } from '../../voucher/voucher.service.interface';
+import { VoucherService } from '../../voucher/implements/voucher.service.implement';
+import { Voucher } from '../../../models/voucher.model';
+import { IProductService } from '../../product/product.service.interface';
+import { ProductService } from '../../product/implements/product.service.implement';
 
 export class OrderService implements IOrderService {
   private readonly orderRepository: OrderRepository;
@@ -26,6 +34,8 @@ export class OrderService implements IOrderService {
   private readonly cartItemRepository: CartItemRepository;
   private readonly productCacheService: IProductCacheService;
   private readonly recommendationService: RecommendationService;
+  private readonly voucherService: IVoucherService;
+  private readonly productService: IProductService;
 
   constructor() {
     this.orderRepository = new OrderRepository();
@@ -36,6 +46,8 @@ export class OrderService implements IOrderService {
     this.cartItemRepository = new CartItemRepository();
     this.productCacheService = new ProductCacheService();
     this.recommendationService = new RecommendationService();
+    this.voucherService = new VoucherService();
+    this.productService = new ProductService();
   }
 
   async updateOrder(order: UpdateOrderRequestDto): Promise<OrderResponseDto> {
@@ -51,7 +63,10 @@ export class OrderService implements IOrderService {
     return this.orderRepository.getOrderById(id);
   }
 
-  async getAllOrders(page: number, limit: number): Promise<PaginatedOrdersResponseDto> {
+  async getAllOrders(
+    page: number,
+    limit: number,
+  ): Promise<PaginatedOrdersResponseDto> {
     return this.orderRepository.getAllOrders(page, limit);
   }
 
@@ -59,6 +74,10 @@ export class OrderService implements IOrderService {
     try {
       return await this.dataSource.transaction(async (m) => {
         const warehouseAllocations: any[] = [];
+
+        if (!order.items || order.items.length === 0) {
+          throw new Error('Đơn hàng phải có ít nhất 1 sản phẩm');
+        }
         for (const item of order.items || []) {
           const candidates =
             await this.inventoryRepository.getInventoryByVariantId(
@@ -83,15 +102,41 @@ export class OrderService implements IOrderService {
           if (!allocated) throw new Error('Không đủ hàng cho sản phẩm.');
         }
 
+        order.shippingFee = order.shippingFee ?? 0;
+        order.discount = order.discount ?? 0;
+
         const subTotal = order.items.reduce((sum, item) => {
           return sum + item.rate * item.quantity;
         }, 0);
 
-        const discountAmount = subTotal * (order.discount / 100);
-        const totalAmount = subTotal - discountAmount + order.shippingFee;
-
         order.subTotal = subTotal;
-        order.totalAmount = totalAmount;
+
+        let appliedVoucher: Voucher | null = null;
+        let discountPercentage = order.discount ?? 0;
+
+        if (order.voucherCode && order.user?.id) {
+          const voucher = await this.voucherService.validateVoucherForOrder(
+            order.voucherCode,
+            order.user.id,
+            subTotal,
+          );
+          appliedVoucher = voucher;
+          discountPercentage = voucher.discountPercentage;
+          order.voucher = voucher;
+          order.voucherCode = voucher.code;
+        }
+
+        const discountAmount = subTotal * (discountPercentage / 100);
+        const cappedDiscount =
+          appliedVoucher?.maxDiscountValue !== undefined &&
+          appliedVoucher?.maxDiscountValue !== null
+            ? Math.min(discountAmount, appliedVoucher.maxDiscountValue)
+            : discountAmount;
+
+        const totalAmount = subTotal - cappedDiscount + order.shippingFee;
+
+        order.discount = discountPercentage;
+        order.totalAmount = Math.max(totalAmount, 0);
 
         if (order.isCOD) {
           order.status = OrderStatus.PENDING;
@@ -161,33 +206,29 @@ export class OrderService implements IOrderService {
         // Update user preference vector based on purchased products
         if (order.user && order.user.id) {
           const userId = parseInt(order.user.id);
-          const { ProductService } = await import(
-            '../../product/implements/product.service.implement'
-          );
-          const productService = new ProductService();
 
           // Track each purchased product asynchronously
           for (const item of order.items) {
             if (item.product.id) {
-              productService
-                .getProductEmbedding(item.product.id)
-                .then((embedding) => {
-                  if (embedding) {
-                    return this.recommendationService.updateUserPreference(
-                      userId,
-                      embedding,
-                      0.5, // Higher weight for purchase action
-                    );
-                  }
-                })
-                .catch((error) => {
-                  console.error(
-                    `Error tracking purchase for product ${item.product.id}:`,
-                    error,
-                  );
-                });
+              const embedding = await this.productService.getProductEmbedding(
+                item.product.id,
+              );
+              if (embedding) {
+                await this.recommendationService.updateUserPreference(
+                  userId,
+                  embedding,
+                  0.1,
+                );
+              }
             }
           }
+        }
+
+        if (appliedVoucher && order.user?.id) {
+          await this.voucherService.markVoucherAsUsed(
+            appliedVoucher.id,
+            order.user.id,
+          );
         }
 
         return createdOrder;
