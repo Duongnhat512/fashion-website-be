@@ -134,4 +134,8 @@ export class VoucherQueryDto {
   @IsOptional()
   @IsNumber()
   limit?: number;
+
+  @IsOptional()
+  @IsString()
+  userId?: string;
 }

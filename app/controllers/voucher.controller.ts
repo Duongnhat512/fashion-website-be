@@ -132,6 +132,7 @@ export class VoucherController {
             : undefined,
         page: req.query.page ? Number(req.query.page) : undefined,
         limit: req.query.limit ? Number(req.query.limit) : undefined,
+        userId: req.user?.role !== 'admin' ? req.user?.userId : undefined,
       });
       const errors = await validate(queryDto, { skipMissingProperties: true });
       if (errors.length > 0) {
