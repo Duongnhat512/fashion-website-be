@@ -1,6 +1,5 @@
 import dotenv from 'dotenv';
 import Joi from 'joi';
-import type { StringValue } from 'ms';
 
 dotenv.config();
 
@@ -77,8 +76,8 @@ export const config = {
     password: envVars.REDIS_PASSWORD,
   },
   saltRounds: envVars.SALT_ROUNDS,
-  jwtRefreshTokenExpiresIn: envVars.JWT_REFRESH_TOKEN_EXPIRES_IN as StringValue,
-  jwtAccessTokenExpiresIn: envVars.JWT_ACCESS_TOKEN_EXPIRES_IN as StringValue,
+  jwtRefreshTokenExpiresIn: envVars.JWT_REFRESH_TOKEN_EXPIRES_IN,
+  jwtAccessTokenExpiresIn: envVars.JWT_ACCESS_TOKEN_EXPIRES_IN,
   secretToken: envVars.SECRET_TOKEN,
   email: {
     user: envVars.GOOGLE_SENDER,
