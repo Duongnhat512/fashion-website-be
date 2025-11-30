@@ -1,8 +1,8 @@
 import {
   CategoryResponseDto,
   CategoryTreeResponseDto,
-} from '../dtos/response/category/category.response';
-import { Category } from '../models/category.model';
+} from '../../dtos/response/category/category.response';
+import { Category } from '../../models/category.model';
 
 export interface ICategoryService {
   create(category: Category): Promise<CategoryResponseDto>;

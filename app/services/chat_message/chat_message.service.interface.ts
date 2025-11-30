@@ -1,5 +1,5 @@
-import { ChatMessage } from '../../../models/chat_message.model';
-import MessageType from '../../../models/enum/message_type.enum';
+import { ChatMessage } from '../../models/chat_message.model';
+import MessageType from '../../models/enum/message_type.enum';
 
 export interface CreateChatMessageDto {
   conversationId: string;
@@ -39,4 +39,3 @@ export interface IChatMessageService {
    */
   countUnread(conversationId: string, userId: string): Promise<number>;
 }
-

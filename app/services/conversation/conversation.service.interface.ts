@@ -1,6 +1,6 @@
-import { Conversation } from '../../../models/conversation.model';
-import ConversationType from '../../../models/enum/conversation_type.enum';
-import ConversationStatus from '../../../models/enum/conversation_status.enum';
+import { Conversation } from '../../models/conversation.model';
+import ConversationType from '../../models/enum/conversation_type.enum';
+import ConversationStatus from '../../models/enum/conversation_status.enum';
 
 export interface IConversationService {
   /**
@@ -36,10 +36,7 @@ export interface IConversationService {
   /**
    * Assign nhân viên cho conversation
    */
-  assignAgent(
-    conversationId: string,
-    agentId: string,
-  ): Promise<Conversation>;
+  assignAgent(conversationId: string, agentId: string): Promise<Conversation>;
 
   /**
    * Lấy các conversations đang chờ nhân viên xử lý
@@ -93,4 +90,3 @@ export interface IConversationService {
     lastReadMessageId?: string,
   ): Promise<void>;
 }
-
