@@ -13,9 +13,22 @@ const envSchema = Joi.object({
   // Database
   PG_HOST: Joi.string().default('localhost'),
   PG_PORT: Joi.number().default(5432),
-  PG_USER: Joi.string().required(),
-  PG_PASSWORD: Joi.string().required(),
-  PG_DATABASE: Joi.string().required(),
+  PG_USER: Joi.string().when('DATABASE_URL', {
+    is: Joi.exist(),
+    then: Joi.optional(),
+    otherwise: Joi.required(),
+  }),
+  PG_PASSWORD: Joi.string().when('DATABASE_URL', {
+    is: Joi.exist(),
+    then: Joi.optional(),
+    otherwise: Joi.required(),
+  }),
+  PG_DATABASE: Joi.string().when('DATABASE_URL', {
+    is: Joi.exist(),
+    then: Joi.optional(),
+    otherwise: Joi.required(),
+  }),
+  DATABASE_URL: Joi.string().optional(),
 
   // Redis
   REDIS_HOST: Joi.string().default('localhost'),
@@ -43,9 +56,6 @@ const envSchema = Joi.object({
 
   // Gemini AI
   GEMINI_API_KEY: Joi.string().required(),
-
-  // Database URL
-  DATABASE_URL: Joi.string().optional(),
 }).unknown();
 
 const { error, value: envVars } = envSchema.validate(process.env);

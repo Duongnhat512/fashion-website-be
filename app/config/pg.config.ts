@@ -7,6 +7,12 @@ const pool = new Pool({
   user: config.pg.user,
   password: config.pg.password,
   database: config.pg.database,
+  ssl:
+    config.nodeEnv === 'production'
+      ? {
+          rejectUnauthorized: false,
+        }
+      : false,
 });
 
 export async function initPg(): Promise<void> {

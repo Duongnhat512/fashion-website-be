@@ -59,4 +59,10 @@ export const AppDataSource = new DataSource({
   ],
   synchronize: true,
   logging: false,
+  ssl:
+    config.nodeEnv === 'production'
+      ? {
+          rejectUnauthorized: false,
+        }
+      : false,
 });
