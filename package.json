@@ -15,7 +15,8 @@
     "deps:check": "npm outdated",
     "deps:update": "npm update",
     "logs:clean": "rm -rf logs/*.log",
-    "logs:view": "tail -f logs/combined.log"
+    "logs:view": "tail -f logs/combined.log",
+    "postinstall": "npm run build"
   },
   "author": "",
   "license": "ISC",
@@ -73,6 +74,7 @@
     "@types/helmet": "^4.0.0",
     "@types/ioredis": "^4.28.10",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/ms": "^0.7.34",
     "@types/morgan": "^1.9.10",
     "@types/multer": "^2.0.0",
     "@types/node": "^24.3.0",
