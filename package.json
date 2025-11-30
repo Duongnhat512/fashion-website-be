@@ -5,7 +5,8 @@
   "main": "server.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "ts-node server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
     "dev": "nodemon server.ts",
     "security:audit": "npm audit",
     "security:fix": "npm audit fix",
