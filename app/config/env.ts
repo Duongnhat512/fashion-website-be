@@ -22,6 +22,7 @@ const envSchema = Joi.object({
   REDIS_HOST: Joi.string().default('localhost'),
   REDIS_PORT: Joi.number().default(6379),
   REDIS_PASSWORD: Joi.string().default('redis123'),
+  REDIS_USERNAME: Joi.string().optional(),
 
   // JWT
   SECRET_TOKEN: Joi.string(),
@@ -43,6 +44,9 @@ const envSchema = Joi.object({
 
   // Gemini AI
   GEMINI_API_KEY: Joi.string().required(),
+
+  // Database URL
+  DATABASE_URL: Joi.string().optional(),
 }).unknown();
 
 const { error, value: envVars } = envSchema.validate(process.env);
@@ -60,6 +64,7 @@ export const config = {
     user: envVars.PG_USER,
     password: envVars.PG_PASSWORD,
     database: envVars.PG_DATABASE,
+    url: envVars.DATABASE_URL,
   },
   redisCache: {
     host: envVars.REDIS_HOST,
@@ -83,6 +88,7 @@ export const config = {
     host: envVars.REDIS_HOST,
     port: envVars.REDIS_PORT,
     password: envVars.REDIS_PASSWORD,
+    username: envVars.REDIS_USERNAME,
   },
   vnpay: {
     tmnCode: envVars.VNPAY_TMN_CODE,

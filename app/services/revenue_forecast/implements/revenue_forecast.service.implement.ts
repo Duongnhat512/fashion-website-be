@@ -54,11 +54,12 @@ export class RevenueForecastService implements IRevenueForecastService {
       }
 
       // Get historical revenue time series data
-      const historicalData = await this.statisticsRepository.getRevenueTimeSeries(
-        period === 'week' ? 'day' : period === 'month' ? 'day' : 'month',
-        defaultStartDate,
-        defaultEndDate,
-      );
+      const historicalData =
+        await this.statisticsRepository.getRevenueTimeSeries(
+          period === 'week' ? 'day' : period === 'month' ? 'day' : 'month',
+          defaultStartDate,
+          defaultEndDate,
+        );
 
       // Get total revenue for the period
       const totalRevenue = await this.statisticsRepository.getTotalRevenue(
@@ -138,21 +139,31 @@ export class RevenueForecastService implements IRevenueForecastService {
     };
 
     return `
-Bạn là chuyên gia phân tích tài chính. Hãy phân tích dữ liệu doanh thu lịch sử và đưa ra dự báo cho ${periodText[period]}.
+Bạn là chuyên gia phân tích tài chính. Hãy phân tích dữ liệu doanh thu lịch sử và đưa ra dự báo cho ${
+      periodText[period]
+    }.
 
 ## DỮ LIỆU LỊCH SỬ:
 ${historicalData
   .slice(-30)
   .map(
     (item) =>
-      `- ${item.date}: ${item.revenue.toLocaleString('vi-VN')} VNĐ (${item.count} đơn hàng)`,
+      `- ${item.date}: ${item.revenue.toLocaleString('vi-VN')} VNĐ (${
+        item.count
+      } đơn hàng)`,
   )
   .join('\n')}
 
 ## THỐNG KÊ:
 - Tổng doanh thu trong kỳ phân tích: ${totalRevenue.toLocaleString('vi-VN')} VNĐ
 - Doanh thu trung bình/ngày: ${averageDailyRevenue.toLocaleString('vi-VN')} VNĐ
-- Xu hướng: ${trend === 'increasing' ? 'Tăng' : trend === 'decreasing' ? 'Giảm' : 'Ổn định'}
+- Xu hướng: ${
+      trend === 'increasing'
+        ? 'Tăng'
+        : trend === 'decreasing'
+        ? 'Giảm'
+        : 'Ổn định'
+    }
 - Tốc độ tăng trưởng: ${growthRate.toFixed(2)}%
 
 ## YÊU CẦU:
@@ -227,7 +238,9 @@ Hãy phân tích và trả về kết quả dưới dạng JSON với cấu trú
         forecast: {
           period,
           forecastDate: forecastDate.toISOString(),
-          predictedRevenue: parsed.predictedRevenue || this.calculateSimpleForecast(averageDailyRevenue, period),
+          predictedRevenue:
+            parsed.predictedRevenue ||
+            this.calculateSimpleForecast(averageDailyRevenue, period),
           confidence: parsed.confidence || 'medium',
           range: parsed.range || {
             min: (parsed.predictedRevenue || 0) * 0.7,
@@ -245,8 +258,20 @@ Hãy phân tích và trả về kết quả dưới dạng JSON với cấu trú
           })),
         },
         insights: parsed.insights || {
-          summary: `Dựa trên xu hướng ${trend === 'increasing' ? 'tăng' : trend === 'decreasing' ? 'giảm' : 'ổn định'} (${growthRate.toFixed(2)}%), doanh thu dự kiến sẽ phát triển theo hướng tương tự.`,
-          factors: ['Xu hướng lịch sử', 'Tốc độ tăng trưởng', 'Số lượng đơn hàng trung bình'],
+          summary: `Dựa trên xu hướng ${
+            trend === 'increasing'
+              ? 'tăng'
+              : trend === 'decreasing'
+              ? 'giảm'
+              : 'ổn định'
+          } (${growthRate.toFixed(
+            2,
+          )}%), doanh thu dự kiến sẽ phát triển theo hướng tương tự.`,
+          factors: [
+            'Xu hướng lịch sử',
+            'Tốc độ tăng trưởng',
+            'Số lượng đơn hàng trung bình',
+          ],
           recommendations: [
             'Tối ưu hóa chiến dịch marketing để tăng doanh thu',
             'Theo dõi sát sao các chỉ số để điều chỉnh kịp thời',
@@ -291,13 +316,13 @@ Hãy phân tích và trả về kết quả dưới dạng JSON với cấu trú
     const secondHalf = recentData.slice(Math.floor(recentData.length / 2));
 
     const firstAvg =
-      firstHalf.reduce((sum, item) => sum + item.revenue, 0) /
-      firstHalf.length;
+      firstHalf.reduce((sum, item) => sum + item.revenue, 0) / firstHalf.length;
     const secondAvg =
       secondHalf.reduce((sum, item) => sum + item.revenue, 0) /
       secondHalf.length;
 
-    const growthRate = firstAvg > 0 ? ((secondAvg - firstAvg) / firstAvg) * 100 : 0;
+    const growthRate =
+      firstAvg > 0 ? ((secondAvg - firstAvg) / firstAvg) * 100 : 0;
 
     let trend: 'increasing' | 'decreasing' | 'stable';
     if (growthRate > 5) {
@@ -377,7 +402,13 @@ Hãy phân tích và trả về kết quả dưới dạng JSON với cấu trú
           })) || [],
       },
       insights: {
-        summary: `Dự báo dựa trên doanh thu trung bình hàng ngày. Xu hướng hiện tại: ${calcTrend === 'increasing' ? 'tăng' : calcTrend === 'decreasing' ? 'giảm' : 'ổn định'}.`,
+        summary: `Dự báo dựa trên doanh thu trung bình hàng ngày. Xu hướng hiện tại: ${
+          calcTrend === 'increasing'
+            ? 'tăng'
+            : calcTrend === 'decreasing'
+            ? 'giảm'
+            : 'ổn định'
+        }.`,
         factors: [
           'Doanh thu trung bình trong kỳ phân tích',
           'Xu hướng lịch sử',
@@ -396,4 +427,3 @@ Hãy phân tích và trả về kết quả dưới dạng JSON với cấu trú
     };
   }
 }
-

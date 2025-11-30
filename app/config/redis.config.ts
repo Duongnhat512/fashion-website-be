@@ -5,6 +5,7 @@ const redis = new Redis({
   host: config.redis.host,
   port: config.redis.port,
   password: config.redis.password,
+  username: config.redis.username,
   maxRetriesPerRequest: 3,
   lazyConnect: true,
 });
