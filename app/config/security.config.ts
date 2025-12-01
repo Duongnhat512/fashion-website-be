@@ -6,7 +6,7 @@ import { config } from './env';
 export const securityConfig = {
   cors: {
     origin: [
-      'https://fashion-website-fe1.vercel.app/', // Production frontend
+      'https://fashion-website-fe1.vercel.app', // Production frontend
       ...(config.nodeEnv === 'development'
         ? ['http://localhost:3636', 'http://localhost:5173']
         : []),
