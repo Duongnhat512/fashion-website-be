@@ -33,9 +33,6 @@ class Address {
   @Column({ type: 'varchar', length: 255 })
   ward!: string;
 
-  @Column({ type: 'varchar', length: 255, name: 'address_line' })
-  addressLine!: string;
-
   @Column({ type: 'boolean', default: false, name: 'is_default' })
   isDefault!: boolean;
 

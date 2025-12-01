@@ -4,11 +4,10 @@ export class ReviewResponseDto {
   userId!: string;
   userName!: string;
   userAvatar?: string;
-replyToId: string | null;
+  replyToId: string | null;
   images!: string[];
   rating!: number;
   comment?: string;
-  isVerified!: boolean;
   createdAt!: Date;
   updatedAt!: Date;
 }

@@ -7,6 +7,7 @@ export const securityConfig = {
   cors: {
     origin: [
       'https://fashion-website-fe1.vercel.app', // Production frontend
+      'https://*.vercel.app', // Vercel preview domains
       ...(config.nodeEnv === 'development'
         ? ['http://localhost:3636', 'http://localhost:5173']
         : []),
@@ -25,7 +26,7 @@ export const securityConfig = {
 
   // Rate limiting configuration
   rateLimit: {
-    windowMs: 15 * 60 * 1000, // 15 minutes
+    windowMs: 2 * 60 * 1000,
     max: config.nodeEnv === 'production' ? 100 : 1000,
     skipSuccessfulRequests: false,
     skipFailedRequests: false,

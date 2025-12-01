@@ -10,7 +10,7 @@ import {
   UpdateReviewRequestDto,
 } from '../dtos/request/review/review.request';
 import { Product } from '../models/product.model';
-import { IsNull, Not } from "typeorm";
+import { IsNull, Not } from 'typeorm';
 export class ReviewRepository {
   private readonly reviewRepository: Repository<Review>;
   private readonly productRepository: Repository<Product>;
@@ -92,10 +92,9 @@ export class ReviewRepository {
       userName: review.user?.fullname || '',
       replyToId: review.replyTo ? review.replyTo.id : null,
       userAvatar: review.user?.avt || '',
-     images: review.images || [], 
+      images: review.images || [],
       rating: review.rating,
       comment: review.comment,
-      isVerified: review.isVerified,
       createdAt: review.createdAt,
       updatedAt: review.updatedAt,
     };
@@ -127,31 +126,30 @@ export class ReviewRepository {
     page: number = 1,
     limit: number = 10,
   ): Promise<PaginatedReviewsResponseDto> {
- const [reviews, total] = await this.reviewRepository.findAndCount({
-  relations: {
-    user: true,
-    product: true,
-    replyTo: true,
-    replies: {
-      user: true,
-    },
-  },
-  where: {
-    product: {
-      id: productId,
-    },
-    replyTo: IsNull(),
-    user: {
-      id: Not(IsNull()),
-    },
-  },
-  skip: (page - 1) * limit,
-  take: limit,
-  order: {
-    createdAt: "DESC",
-  },
-});
-
+    const [reviews, total] = await this.reviewRepository.findAndCount({
+      relations: {
+        user: true,
+        product: true,
+        replyTo: true,
+        replies: {
+          user: true,
+        },
+      },
+      where: {
+        product: {
+          id: productId,
+        },
+        replyTo: IsNull(),
+        user: {
+          id: Not(IsNull()),
+        },
+      },
+      skip: (page - 1) * limit,
+      take: limit,
+      order: {
+        createdAt: 'DESC',
+      },
+    });
 
     return {
       reviews: reviews.map((review) => {
@@ -172,11 +170,11 @@ export class ReviewRepository {
           userAvatar: review.user?.avt || '',
           rating: review.rating,
           comment: review.comment,
-          images: review.images || [], 
-          isVerified: review.isVerified,
+          images: review.images || [],
           createdAt: review.createdAt,
           updatedAt: review.updatedAt,
-            replies: review.replies?.map((reply) => {
+          replies:
+            review.replies?.map((reply) => {
               if (!reply.user) {
                 console.warn(`Reply ${reply.id} has no user relation`);
               }
@@ -184,7 +182,7 @@ export class ReviewRepository {
                 id: reply.id,
                 userId: reply.user?.id || '',
                 userName: reply.user?.fullname || '',
-                userAvatar: reply.user?.avt || '', 
+                userAvatar: reply.user?.avt || '',
                 comment: reply.comment,
                 rating: reply.rating,
                 images: reply.images || [],
@@ -215,86 +213,86 @@ export class ReviewRepository {
       },
     });
   }
-async getAllReviews(
-  page: number = 1,
-  limit: number = 10
-): Promise<PaginatedReviewsResponseDto> {
- const [reviews, total] = await this.reviewRepository.findAndCount({
-  relations: {
-    user: true,
-    product: true,
-    replyTo: true,
-    replies: {
-      user: true,
-    },
-  },
-  where: {
-    replyTo: IsNull(),
-    // Ensure user and product exist
-    user: {
-      id: Not(IsNull()),
-    },
-    product: {
-      id: Not(IsNull()),
-    },
-  },
-  skip: (page - 1) * limit,
-  take: limit,
-  order: {
-    createdAt: "DESC",
-  },
-});
+  async getAllReviews(
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<PaginatedReviewsResponseDto> {
+    const [reviews, total] = await this.reviewRepository.findAndCount({
+      relations: {
+        user: true,
+        product: true,
+        replyTo: true,
+        replies: {
+          user: true,
+        },
+      },
+      where: {
+        replyTo: IsNull(),
+        // Ensure user and product exist
+        user: {
+          id: Not(IsNull()),
+        },
+        product: {
+          id: Not(IsNull()),
+        },
+      },
+      skip: (page - 1) * limit,
+      take: limit,
+      order: {
+        createdAt: 'DESC',
+      },
+    });
 
-  return {
-    reviews: reviews.map((review) => {
-      // Debug logging for null relations
-      if (!review.product) {
-        console.warn(`Review ${review.id} has no product relation`);
-      }
-      if (!review.user) {
-        console.warn(`Review ${review.id} has no user relation`);
-      }
+    return {
+      reviews: reviews.map((review) => {
+        // Debug logging for null relations
+        if (!review.product) {
+          console.warn(`Review ${review.id} has no product relation`);
+        }
+        if (!review.user) {
+          console.warn(`Review ${review.id} has no user relation`);
+        }
 
-      return {
-        id: review.id,
-        productId: review.product?.id || '',
-        userId: review.user?.id || '',
-        images: review.images || [], 
-        replyToId: review.replyTo ? review.replyTo.id : null,
-        userName: review.user?.fullname || '',
-        userAvatar: review.user?.avt || '',
-        rating: review.rating,
-        comment: review.comment,
-        isVerified: review.isVerified,
-        createdAt: review.createdAt,
-        updatedAt: review.updatedAt,
-          replies: review.replies?.map((reply) => {
-            if (!reply.user) {
-              console.warn(`Reply ${reply.id} has no user relation`);
-            }
-            return {
-              id: reply.id,
-              userId: reply.user?.id || '',
-              userName: reply.user?.fullname || '',
-              userAvatar: reply.user?.avt || '',
-              comment: reply.comment,
-              rating: reply.rating,
-              images: reply.images || [],
-              createdAt: reply.createdAt,
-            };
-          }) || [],
-      };
-    }),
-    pagination: {
-      total,
-      totalPages: Math.ceil(total / limit),
-      hasNext: page * limit < total,
-      hasPrev: page > 1,
-      page,
-      limit,
-    },
-  };
-}
+        return {
+          id: review.id,
+          productId: review.product?.id || '',
+          userId: review.user?.id || '',
+          images: review.images || [],
+          replyToId: review.replyTo ? review.replyTo.id : null,
+          userName: review.user?.fullname || '',
+          userAvatar: review.user?.avt || '',
+          rating: review.rating,
+          comment: review.comment,
+          createdAt: review.createdAt,
+          updatedAt: review.updatedAt,
+          replies:
+            review.replies?.map((reply) => {
+              if (!reply.user) {
+                console.warn(`Reply ${reply.id} has no user relation`);
+              }
+              return {
+                id: reply.id,
+                userId: reply.user?.id || '',
+                userName: reply.user?.fullname || '',
+                userAvatar: reply.user?.avt || '',
+                comment: reply.comment,
+                rating: reply.rating,
+                images: reply.images || [],
+                createdAt: reply.createdAt,
+              };
+            }) || [],
+        };
+      }),
+      pagination: {
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasNext: page * limit < total,
+        hasPrev: page > 1,
+        page,
+        limit,
+      },
+    };
+  }
 
   async calculateProductRating(productId: string): Promise<{
     average: number;
