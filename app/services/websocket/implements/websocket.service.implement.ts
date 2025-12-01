@@ -8,6 +8,7 @@ import { AuthService } from '../../auth/implements/auth.service.implement';
 import logger from '../../../utils/logger';
 import ConversationType from '../../../models/enum/conversation_type.enum';
 import MessageType from '../../../models/enum/message_type.enum';
+import { securityConfig } from '../../../config/security.config';
 
 interface AuthenticatedSocket extends Socket {
   userId?: string;
@@ -34,11 +35,7 @@ export class WebSocketService implements IWebSocketService {
 
   initialize(server: HTTPServer): SocketIOServer {
     const io = new SocketIOServer(server, {
-      cors: {
-        origin: process.env.FRONTEND_URL || '*',
-        methods: ['GET', 'POST'],
-        credentials: true,
-      },
+      cors: securityConfig.cors,
       transports: ['websocket', 'polling'],
     });
 
