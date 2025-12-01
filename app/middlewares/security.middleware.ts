@@ -8,8 +8,8 @@ import { config } from '../config/env';
  * Rate limiting middleware
  */
 export const rateLimiter = rateLimit({
-  windowMs: 2 * 60 * 1000, // 15 minutes
-  max: config.nodeEnv === 'production' ? 100 : 1000, // limit each IP to 100 requests per windowMs in production
+  windowMs: 1 * 60 * 1000, // 15 minutes
+  max: 1000, // limit each IP to 100 requests per windowMs in production
   message: {
     success: false,
     message: 'Quá nhiều requests từ IP này, vui lòng thử lại sau 15 phút.',
