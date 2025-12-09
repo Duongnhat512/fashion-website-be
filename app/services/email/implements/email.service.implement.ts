@@ -1,7 +1,7 @@
 import * as nodemailer from 'nodemailer';
 import { IEmailService } from '../email.service.interface';
 import Handlebars from 'handlebars';
-import { readFileSync } from 'fs';
+import fs from 'fs';
 import path from 'path';
 import { config } from '../../../config/env';
 
@@ -37,17 +37,17 @@ export class EmailService implements IEmailService {
 
   async readHtmlTemplate(templatename: string, data: any) {
     try {
+      const projectRoot = process.cwd();
       const templatePath = path.join(
-        __dirname,
-        '../../..',
+        projectRoot,
+        'app',
         'html',
         `${templatename}.html`,
       );
-      const htmlSource = readFileSync(templatePath, 'utf-8');
+  
+      const htmlSource = fs.readFileSync(templatePath, 'utf-8');
       const template = Handlebars.compile(htmlSource);
-      const html = template(data);
-
-      return html;
+      return template(data);
     } catch (error) {
       throw new Error('Failed to read HTML template');
     }
