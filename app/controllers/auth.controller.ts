@@ -78,6 +78,7 @@ export class AuthController {
           ),
         );
     } catch (error) {
+      console.error(error);
       res.status(500).json(ApiResponse.error('Lỗi khi gửi OTP'));
     }
   }
