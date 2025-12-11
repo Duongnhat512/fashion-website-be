@@ -687,8 +687,15 @@ export class ChatbotService implements IChatbotService {
       const finalResult = await chat.sendMessage(functionResults);
       const finalResponse = finalResult.response;
 
-      // Add model response to history
-      let historyText = finalResponse.text();
+      // Get clean message for user (remove any system context if exists)
+      let userMessage = finalResponse.text();
+      // Remove System Context section if Gemini accidentally included it
+      const systemContextRegex =
+        /\n\n\[System Context[^\]]*\]:?\s*\n[\s\S]*?(?=\n\n|$)/i;
+      userMessage = userMessage.replace(systemContextRegex, '').trim();
+
+      // Prepare history text (with system context for bot's future reference)
+      let historyText = userMessage;
       if (products && products.length > 0) {
         const productContext = products
           .map(
@@ -698,16 +705,19 @@ export class ChatbotService implements IChatbotService {
                 .join(', ')}`,
           )
           .join('\n');
+        // Append system context to history (but NOT to user message)
         historyText += `\n\n[System Context - Thông tin sản phẩm đã tìm thấy (Khách hàng không nhìn thấy dòng này, chỉ dùng để bot tham chiếu đặt hàng):\n${productContext}]`;
       }
 
+      // Save to history with system context (for bot's reference in future conversations)
       await this.memoryService.addMessage(sessionId, {
         role: 'model',
         parts: [{ text: historyText }],
       });
 
+      // Return clean message to user (without system context)
       return {
-        message: finalResponse.text(),
+        message: userMessage,
         products: this.formatProductsForResponse(products),
         requiresAction,
         sessionId: request.userId,
