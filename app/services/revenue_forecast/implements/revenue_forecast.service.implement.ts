@@ -6,32 +6,25 @@ import {
 } from '../revenue_forecast.service.interface';
 import { StatisticsRepository } from '../../../repositories/statistics.repository';
 import logger from '../../../utils/logger';
+import redis from '../../../config/redis.config';
+import { GeminiKeyManager } from '../../gemini_key_manager/implements/gemini_key_manager.service.implement';
 
 export class RevenueForecastService implements IRevenueForecastService {
-  private genAI: GoogleGenerativeAI;
-  private model: any;
+  private keyManager: GeminiKeyManager;
   private statisticsRepository: StatisticsRepository;
 
-  constructor() {
-    this.genAI = new GoogleGenerativeAI(config.gemini.apiKey);
-    this.statisticsRepository = new StatisticsRepository();
+  // Cache keys and TTL
+  private readonly CACHE_PREFIX = 'revenue:forecast:';
+  private readonly CACHE_TTL = {
+    week: 3600, // 1 hour for weekly forecast
+    month: 3600, // 1 hour for monthly forecast
+    quarter: 21600, // 6 hours for quarterly forecast
+    year: 86400, // 24 hours for yearly forecast
+  };
 
-    // Initialize Gemini model for revenue forecasting
-    this.model = this.genAI.getGenerativeModel({
-      model: config.gemini.model || 'gemini-1.5-flash',
-      systemInstruction: `
-        Bạn là một chuyên gia phân tích tài chính và dự báo doanh thu chuyên nghiệp.
-        Nhiệm vụ của bạn là phân tích dữ liệu doanh thu lịch sử và đưa ra dự báo chính xác cho tương lai.
-        
-        Bạn cần:
-        1. Phân tích xu hướng (trend) từ dữ liệu lịch sử
-        2. Xác định các pattern theo ngày/tuần/tháng
-        3. Đưa ra dự báo với mức độ tin cậy hợp lý
-        4. Cung cấp insights và khuyến nghị cụ thể
-        
-        Trả lời bằng JSON format theo cấu trúc đã định nghĩa.
-      `,
-    });
+  constructor() {
+    this.keyManager = new GeminiKeyManager(config.gemini.apiKeys);
+    this.statisticsRepository = new StatisticsRepository();
   }
 
   async generateForecast(
@@ -52,6 +45,24 @@ export class RevenueForecastService implements IRevenueForecastService {
         defaultStartDate =
           startDate || new Date(Date.now() - 365 * 24 * 60 * 60 * 1000); // 1 year ago
       }
+
+      // Generate cache key based on period and date range
+      const cacheKey = this.getCacheKey(
+        period,
+        defaultStartDate,
+        defaultEndDate,
+      );
+
+      // Try to get from cache first
+      const cachedForecast = await this.getCachedForecast(cacheKey);
+      if (cachedForecast) {
+        logger.info(`Revenue forecast cache hit for period: ${period}`);
+        return cachedForecast;
+      }
+
+      logger.info(
+        `Revenue forecast cache miss, generating new forecast for period: ${period}`,
+      );
 
       // Get historical revenue time series data
       const historicalData =
@@ -76,7 +87,7 @@ export class RevenueForecastService implements IRevenueForecastService {
       // Calculate trend and growth rate
       const { trend, growthRate } = this.calculateTrend(historicalData);
 
-      // Prepare prompt for Gemini
+      // Prepare prompt for Gemini (optimized - less data points)
       const prompt = this.buildForecastPrompt(
         historicalData,
         totalRevenue,
@@ -86,14 +97,9 @@ export class RevenueForecastService implements IRevenueForecastService {
         period,
       );
 
-      // Get forecast from Gemini
-      const result = await this.model.generateContent(prompt);
-      const response = result.response;
-      const text = response.text();
-
-      // Parse Gemini response
-      const forecastData = this.parseGeminiResponse(
-        text,
+      // Get forecast from Gemini with key rotation and timeout
+      const forecastData = await this.getForecastFromGemini(
+        prompt,
         historicalData,
         totalRevenue,
         averageDailyRevenue,
@@ -102,15 +108,304 @@ export class RevenueForecastService implements IRevenueForecastService {
         period,
       );
 
+      // Cache the result
+      await this.cacheForecast(cacheKey, forecastData, period);
+
       return forecastData;
     } catch (error) {
       logger.error('Error generating revenue forecast:', error);
       // Return fallback forecast if Gemini fails
-      return this.generateFallbackForecast(
-        period,
-        await this.statisticsRepository.getTotalRevenue(),
-      );
+      try {
+        const totalRevenue = await this.statisticsRepository.getTotalRevenue();
+        return this.generateFallbackForecast(period, totalRevenue);
+      } catch (fallbackError) {
+        logger.error('Error in fallback forecast:', fallbackError);
+        // Return minimal forecast
+        return this.generateMinimalForecast(period);
+      }
     }
+  }
+
+  /**
+   * Generate cache key for forecast
+   */
+  private getCacheKey(period: string, startDate: Date, endDate: Date): string {
+    // Round dates to hour for better cache hits
+    const startHour = new Date(startDate);
+    startHour.setMinutes(0, 0, 0);
+    const endHour = new Date(endDate);
+    endHour.setMinutes(0, 0, 0);
+
+    return `${
+      this.CACHE_PREFIX
+    }${period}:${startHour.getTime()}:${endHour.getTime()}`;
+  }
+
+  /**
+   * Get cached forecast from Redis
+   */
+  private async getCachedForecast(
+    cacheKey: string,
+  ): Promise<RevenueForecastResponse | null> {
+    try {
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        return JSON.parse(cached) as RevenueForecastResponse;
+      }
+      return null;
+    } catch (error) {
+      logger.warn('Error reading forecast cache:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Cache forecast result in Redis
+   */
+  private async cacheForecast(
+    cacheKey: string,
+    forecast: RevenueForecastResponse,
+    period: 'week' | 'month' | 'quarter' | 'year',
+  ): Promise<void> {
+    try {
+      const ttl = this.CACHE_TTL[period];
+      await redis.setex(cacheKey, ttl, JSON.stringify(forecast));
+      logger.debug(`Cached forecast with TTL ${ttl}s for key: ${cacheKey}`);
+    } catch (error) {
+      logger.warn('Error caching forecast:', error);
+      // Don't throw - caching failure shouldn't break the flow
+    }
+  }
+
+  /**
+   * Get forecast from Gemini with key rotation and retry logic
+   */
+  private async getForecastFromGemini(
+    prompt: string,
+    historicalData: Array<{ date: string; revenue: number; count: number }>,
+    totalRevenue: number,
+    averageDailyRevenue: number,
+    trend: 'increasing' | 'decreasing' | 'stable',
+    growthRate: number,
+    period: 'week' | 'month' | 'quarter' | 'year',
+  ): Promise<RevenueForecastResponse> {
+    const maxRetries = 3;
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      let apiKey: string | null = null;
+
+      try {
+        // Get available API key
+        apiKey = await this.keyManager.getAvailableKey();
+        if (!apiKey) {
+          throw new Error(
+            'No available Gemini API keys. All keys have reached daily limit.',
+          );
+        }
+
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({
+          model: config.gemini.model || 'gemini-2.5-flash',
+          systemInstruction: `
+            Bạn là một chuyên gia phân tích tài chính và dự báo doanh thu hàng đầu với hơn 15 năm kinh nghiệm trong lĩnh vực e-commerce và retail analytics.
+
+            ## NHIỆM VỤ CHÍNH:
+            Phân tích dữ liệu doanh thu lịch sử và đưa ra dự báo chính xác, có cơ sở khoa học cho các kỳ tương lai (tuần/tháng/quý/năm).
+
+            ## QUY TRÌNH PHÂN TÍCH (BẮT BUỘC):
+
+            ### BƯỚC 1: PHÂN TÍCH XU HƯỚNG (TREND ANALYSIS)
+            - Xác định xu hướng tổng thể: Tăng/Ổn định/Giảm dựa trên tốc độ tăng trưởng
+            - Tính toán tốc độ tăng trưởng trung bình giữa các kỳ
+            - Phân tích độ biến động (volatility) của doanh thu
+            - Xác định các điểm bất thường (outliers) và lý do có thể xảy ra
+
+            ### BƯỚC 2: PHÂN TÍCH PATTERN (PATTERN IDENTIFICATION)
+            - Phân tích chu kỳ theo ngày: Xác định ngày trong tuần nào có doanh thu cao/thấp
+            - Phân tích theo tuần: Tìm pattern theo tuần (ví dụ: cuối tuần cao hơn)
+            - Phân tích theo tháng: Xác định tháng peak/off-peak
+            - Phân tích theo mùa: Nhận diện mùa bán hàng (holiday seasons, sales events)
+            - Phân tích theo số lượng đơn hàng: Correlation giữa số đơn và doanh thu
+
+            ### BƯỚC 3: TÍNH TOÁN DỰ BÁO (FORECASTING CALCULATION)
+            - Sử dụng phương pháp kết hợp:
+              * Trend projection: Ngoại suy xu hướng dựa trên tốc độ tăng trưởng
+              * Moving average: Tính trung bình có trọng số (recent data có weight cao hơn)
+              * Seasonal adjustment: Điều chỉnh theo pattern theo mùa (nếu có)
+            - Công thức đề xuất:
+              * predictedRevenue = averageDailyRevenue × periodDays × (1 + growthRate/100) × seasonalFactor
+              * Trong đó seasonalFactor = 1.0 nếu không có pattern rõ ràng, hoặc ±0.1-0.2 dựa trên historical pattern
+
+            ### BƯỚC 4: XÁC ĐỊNH CONFIDENCE LEVEL
+            - **HIGH confidence**: 
+              * Có ≥30 data points
+              * Trend rõ ràng và nhất quán (growth rate ổn định)
+              * Ít biến động (standard deviation < 20% của mean)
+              * Pattern theo mùa rõ ràng và lặp lại
+              
+            - **MEDIUM confidence**:
+              * Có 15-29 data points
+              * Trend có nhưng có một số biến động
+              * Pattern chưa rõ ràng hoàn toàn
+              
+            - **LOW confidence**:
+              * Có <15 data points
+              * Trend không rõ ràng hoặc biến động lớn
+              * Không có pattern nào được xác định
+              * Dữ liệu có nhiều outliers
+
+            ### BƯỚC 5: TÍNH TOÁN RANGE (MIN/MAX)
+            - **Range calculation dựa trên confidence:**
+              * HIGH: ±15-20% so với predictedRevenue
+              * MEDIUM: ±20-25% so với predictedRevenue
+              * LOW: ±25-35% so với predictedRevenue
+              
+            - **Min (Pessimistic scenario)**: 
+              * Xét các yếu tố tiêu cực: giảm tốc độ tăng trưởng, tăng cạnh tranh, thay đổi market
+              * Tính: predictedRevenue × (1 - variance_factor)
+              
+            - **Max (Optimistic scenario)**:
+              * Xét các yếu tố tích cực: marketing hiệu quả, seasonal boost, mở rộng customer base
+              * Tính: predictedRevenue × (1 + variance_factor)
+
+            ### BƯỚC 6: INSIGHTS & RECOMMENDATIONS
+            - **Summary (2-3 câu):**
+              * Tóm tắt xu hướng chính
+              * Điểm nổi bật về tăng trưởng/pattern
+              * Mức độ tin cậy của dự báo
+              
+            - **Factors (3-5 yếu tố):**
+              * Yếu tố quan trọng ảnh hưởng đến dự báo
+              * Phân tích cụ thể: "Doanh thu tăng X% do..."
+              * Risk factors: "Cần lưu ý về..."
+              
+            - **Recommendations (3-5 khuyến nghị):**
+              * Khuyến nghị dựa trên dữ liệu thực tế
+              * Có thể thực thi (actionable)
+              * Ưu tiên theo impact (high/medium/low)
+              * Ví dụ: "Tăng cường marketing vào [ngày/tháng] để tận dụng pattern tăng doanh thu"
+
+            ## YÊU CẦU VỀ OUTPUT FORMAT:
+            - **BẮT BUỘC** trả về JSON hợp lệ, không có text thừa
+            - Không có markdown formatting ngoài JSON structure
+            - Số liệu phải là số (number), không phải string
+            - confidence phải là một trong: "low" | "medium" | "high"
+            - Tất cả text phải bằng tiếng Việt (trừ JSON keys)
+
+            ## NGUYÊN TẮC QUAN TRỌNG:
+            1. **Dữ liệu là thước đo**: Mọi dự báo phải dựa trên dữ liệu, không phải đoán mò
+            2. **Bảo thủ hơn lạc quan**: Ưu tiên dự báo an toàn hơn là quá lạc quan
+            3. **Giải thích rõ ràng**: Mọi số liệu và insight phải có lý do rõ ràng
+            4. **Thực tế**: Recommendations phải khả thi và dựa trên resources có thể có
+            5. **Cân nhắc rủi ro**: Luôn đề cập đến uncertainty và risk factors
+
+            ## LƯU Ý ĐẶC BIỆT:
+            - Nếu dữ liệu quá ít (<10 points), hãy đánh dấu confidence = "low" và giải thích rõ
+            - Nếu xu hướng biến động lớn, hãy mở rộng range (min/max) hơn
+            - Luôn xem xét correlation giữa số đơn hàng và doanh thu
+            - Khi phân tích, hãy nghĩ như một CFO: cân nhắc cả opportunities và risks
+        `,
+        });
+
+        // Set timeout: 30 seconds
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('Gemini API timeout')), 30000);
+        });
+
+        // Call Gemini with timeout
+        const result = await Promise.race([
+          model.generateContent(prompt),
+          timeoutPromise,
+        ]);
+
+        const response = result.response;
+        const text = response.text();
+
+        // Mark key as used if successful
+        if (apiKey) {
+          await this.keyManager.markKeyUsedByKey(apiKey).catch((err) => {
+            logger.warn('Failed to mark key as used:', err);
+          });
+        }
+
+        // Parse Gemini response
+        return this.parseGeminiResponse(
+          text,
+          historicalData,
+          totalRevenue,
+          averageDailyRevenue,
+          trend,
+          growthRate,
+          period,
+        );
+      } catch (error: any) {
+        lastError = error;
+
+        // Check if it's a rate limit error
+        const isRateLimitError =
+          error.code === 429 ||
+          error.message?.includes('429') ||
+          error.message?.includes('quota') ||
+          error.message?.includes('rate limit') ||
+          error.message?.includes('RESOURCE_EXHAUSTED') ||
+          error.message === 'Gemini API timeout';
+
+        // Check if it's an API key error
+        const isApiKeyError =
+          error.message?.includes('API_KEY') ||
+          error.message?.includes('API key') ||
+          error.code === 401 ||
+          error.code === 403 ||
+          error.message?.includes('No available Gemini API keys');
+
+        if (isRateLimitError || isApiKeyError) {
+          // Mark key as used
+          if (apiKey) {
+            await this.keyManager.markKeyUsedByKey(apiKey).catch((err) => {
+              logger.warn('Failed to mark key as used:', err);
+            });
+          }
+
+          // Try next key if available
+          if (attempt < maxRetries - 1) {
+            logger.warn(
+              `Revenue forecast API key failed, trying next key... (attempt ${
+                attempt + 1
+              }/${maxRetries})`,
+            );
+            continue;
+          }
+        }
+
+        // For other errors, log and continue to fallback
+        logger.error(
+          `Error getting forecast from Gemini (attempt ${attempt + 1}):`,
+          {
+            message: error.message,
+            code: error.code,
+          },
+        );
+
+        // If not rate limit error, don't retry
+        if (!isRateLimitError && !isApiKeyError) {
+          break;
+        }
+      }
+    }
+
+    // All retries failed - use fallback
+    logger.warn(
+      'All API keys failed for revenue forecast, using fallback calculation',
+    );
+    return this.generateFallbackForecast(
+      period,
+      totalRevenue,
+      historicalData,
+      averageDailyRevenue,
+      trend,
+      growthRate,
+    );
   }
 
   /**
@@ -138,21 +433,23 @@ export class RevenueForecastService implements IRevenueForecastService {
       year: '365 ngày tới (1 năm)',
     };
 
+    // Optimize: Only send last 15 data points instead of 30 for faster processing
+    const optimizedData = historicalData.slice(-15);
+
     return `
 Bạn là chuyên gia phân tích tài chính. Hãy phân tích dữ liệu doanh thu lịch sử và đưa ra dự báo cho ${
       periodText[period]
     }.
 
-## DỮ LIỆU LỊCH SỬ:
-${historicalData
-  .slice(-30)
+## DỮ LIỆU LỊCH SỬ (${optimizedData.length} điểm dữ liệu gần nhất):
+${optimizedData
   .map(
     (item) =>
-      `- ${item.date}: ${item.revenue.toLocaleString('vi-VN')} VNĐ (${
+      `${item.date}: ${item.revenue.toLocaleString('vi-VN')} VNĐ (${
         item.count
-      } đơn hàng)`,
+      } đơn)`,
   )
-  .join('\n')}
+  .join(' | ')}
 
 ## THỐNG KÊ:
 - Tổng doanh thu trong kỳ phân tích: ${totalRevenue.toLocaleString('vi-VN')} VNĐ
@@ -422,6 +719,56 @@ Hãy phân tích và trả về kết quả dưới dạng JSON với cấu trú
       },
       metadata: {
         analyzedDataPoints: historicalData?.length || 0,
+        forecastGeneratedAt: new Date().toISOString(),
+      },
+    };
+  }
+
+  /**
+   * Generate minimal forecast when all else fails
+   */
+  private generateMinimalForecast(
+    period: 'week' | 'month' | 'quarter' | 'year',
+  ): RevenueForecastResponse {
+    const periodDays = {
+      week: 7,
+      month: 30,
+      quarter: 90,
+      year: 365,
+    };
+
+    const forecastDate = new Date();
+    forecastDate.setDate(forecastDate.getDate() + periodDays[period]);
+
+    return {
+      forecast: {
+        period,
+        forecastDate: forecastDate.toISOString(),
+        predictedRevenue: 0,
+        confidence: 'low',
+        range: {
+          min: 0,
+          max: 0,
+        },
+      },
+      historicalData: {
+        totalRevenue: 0,
+        averageDailyRevenue: 0,
+        trend: 'stable',
+        growthRate: 0,
+        dataPoints: [],
+      },
+      insights: {
+        summary: 'Không thể tạo dự báo do lỗi hệ thống. Vui lòng thử lại sau.',
+        factors: ['Lỗi hệ thống'],
+        recommendations: [
+          'Thử lại sau ít phút',
+          'Kiểm tra kết nối cơ sở dữ liệu',
+          'Liên hệ admin nếu vấn đề vẫn tiếp diễn',
+        ],
+      },
+      metadata: {
+        analyzedDataPoints: 0,
         forecastGeneratedAt: new Date().toISOString(),
       },
     };

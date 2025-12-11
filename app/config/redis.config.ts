@@ -12,11 +12,31 @@ const redis = new Redis({
 
 export async function initRedis(): Promise<void> {
   try {
+    if (redis.status === 'ready') {
+      console.log('Redis already connected');
+      return;
+    }
+    
+    if (redis.status === 'connecting') {
+      console.log('Redis is connecting, waiting...');
+      await new Promise((resolve) => {
+        redis.once('ready', resolve);
+        redis.once('error', resolve);
+      });
+      return;
+    }
+    
     await redis.connect();
     console.log('Redis connected');
-  } catch (error) {
+  } catch (error: any) {
+    if (
+      error.message?.includes('already connecting') ||
+      error.message?.includes('already connected')
+    ) {
+      console.log('Redis connection already established');
+      return;
+    }
     console.error('Redis connection error', error);
-    process.exit(1);
   }
 }
 

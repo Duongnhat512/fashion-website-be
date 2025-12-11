@@ -55,7 +55,13 @@ const envSchema = Joi.object({
   CLOUDINARY_API_SECRET: Joi.string().required(),
 
   // Gemini AI
-  GEMINI_API_KEY: Joi.string().required(),
+  GEMINI_API_KEY: Joi.string().when('GEMINI_API_KEYS', {
+    is: Joi.exist(),
+    then: Joi.optional(),
+    otherwise: Joi.required(),
+  }), // Deprecated, use GEMINI_API_KEYS instead
+  GEMINI_API_KEYS: Joi.string().optional(), // Comma-separated list of API keys
+  GEMINI_MODEL: Joi.string().default('gemini-1.5-flash'),
 }).unknown();
 
 const { error, value: envVars } = envSchema.validate(process.env);
@@ -112,7 +118,12 @@ export const config = {
     apiSecret: envVars.CLOUDINARY_API_SECRET,
   },
   gemini: {
-    apiKey: envVars.GEMINI_API_KEY,
-    model: envVars.GEMINI_MODEL,
+    apiKey: envVars.GEMINI_API_KEY, // Deprecated - use apiKeys array instead
+    apiKeys: envVars.GEMINI_API_KEYS
+      ? envVars.GEMINI_API_KEYS.split(',').map((k: string) => k.trim())
+      : envVars.GEMINI_API_KEY
+        ? [envVars.GEMINI_API_KEY.trim()]
+        : [],
+    model: envVars.GEMINI_MODEL || 'gemini-2.5-flash',
   },
 };
