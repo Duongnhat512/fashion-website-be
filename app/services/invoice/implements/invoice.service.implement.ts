@@ -3,6 +3,7 @@ import { IInvoiceService } from '../invoice.service.interface';
 import { OrderResponseDto } from '../../../dtos/response/order/order.response';
 import { PassThrough } from 'stream';
 import path from 'path';
+import { config } from '../../../config/env';
 
 const FONT_REGULAR_PATH = path.join(
   process.cwd(),
@@ -118,11 +119,14 @@ export class InvoiceService implements IInvoiceService {
     doc
       .fontSize(10)
       .font('Roboto')
-      .text('Công ty TNHH Thời Trang', { align: 'center' })
-      .text('Địa chỉ: 123 Đường ABC, Quận XYZ, TP.HCM', { align: 'center' })
-      .text('Điện thoại: 0123 456 789 | Email: info@fashion.com', {
-        align: 'center',
-      })
+      .text(config.companyInfo.name, { align: 'center' })
+      .text(`Địa chỉ: ${config.companyInfo.address}`, { align: 'center' })
+      .text(
+        `Điện thoại: ${config.companyInfo.phone} | Email: ${config.companyInfo.email}`,
+        {
+          align: 'center',
+        },
+      )
       .moveDown(1);
 
     doc
@@ -249,17 +253,12 @@ export class InvoiceService implements IInvoiceService {
 
     if (order.discount > 0) {
       doc
+        .text(`Giảm giá:`, tableLeft + 320, summaryY + 20, {
+          width: 80,
+          align: 'right',
+        })
         .text(
-          `Giảm giá (${order.discount}%):`,
-          tableLeft + 320,
-          summaryY + 20,
-          {
-            width: 80,
-            align: 'right',
-          },
-        )
-        .text(
-          this.formatCurrency((order.subTotal * order.discount) / 100),
+          this.formatCurrency(order.discount),
           tableLeft + 410,
           summaryY + 20,
           {
@@ -305,20 +304,31 @@ export class InvoiceService implements IInvoiceService {
     const pageWidth = doc.page.width;
 
     doc
-      .moveDown(1)
+      .moveDown(1.5)
       .fontSize(11)
       .font('Roboto')
-      .translate(-100, 0)
+      .text('Phương thức thanh toán:', tableLeft + 220, summaryY + 80, {
+        width: 180,
+        align: 'right',
+      })
       .text(
-        `Phương thức thanh toán: ${
-          order.isCOD ? 'Thanh toán khi nhận hàng (COD)' : 'Thanh toán online'
-        }`,
+        order.isCOD ? 'COD' : 'Chuyển khoản',
+        tableLeft + 410,
+        summaryY + 80,
         {
-          width: pageWidth - 100,
+          width: 90,
+          align: 'right',
         },
-      )
-      .text(`Trạng thái: ${this.getStatusText(order.status)}`, {
-        width: pageWidth - 100,
+      );
+
+    doc
+      .text('Trạng thái:', tableLeft + 220, summaryY + 100, {
+        width: 180,
+        align: 'right',
+      })
+      .text(this.getStatusText(order.status), tableLeft + 410, summaryY + 100, {
+        width: 90,
+        align: 'right',
       });
 
     const currentY = doc.y;

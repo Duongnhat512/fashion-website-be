@@ -62,6 +62,13 @@ const envSchema = Joi.object({
   }), // Deprecated, use GEMINI_API_KEYS instead
   GEMINI_API_KEYS: Joi.string().optional(), // Comma-separated list of API keys
   GEMINI_MODEL: Joi.string().default('gemini-1.5-flash'),
+
+  // Company Info
+  COMPANY_NAME: Joi.string().required(),
+  COMPANY_TAX_CODE: Joi.string().required(),
+  COMPANY_ADDRESS: Joi.string().required(),
+  COMPANY_PHONE: Joi.string().required(),
+  COMPANY_EMAIL: Joi.string().email().required(),
 }).unknown();
 
 const { error, value: envVars } = envSchema.validate(process.env);
@@ -122,8 +129,15 @@ export const config = {
     apiKeys: envVars.GEMINI_API_KEYS
       ? envVars.GEMINI_API_KEYS.split(',').map((k: string) => k.trim())
       : envVars.GEMINI_API_KEY
-        ? [envVars.GEMINI_API_KEY.trim()]
-        : [],
+      ? [envVars.GEMINI_API_KEY.trim()]
+      : [],
     model: envVars.GEMINI_MODEL || 'gemini-2.5-flash',
+  },
+  companyInfo: {
+    name: envVars.COMPANY_NAME,
+    taxCode: envVars.COMPANY_TAX_CODE,
+    address: envVars.COMPANY_ADDRESS,
+    phone: envVars.COMPANY_PHONE,
+    email: envVars.COMPANY_EMAIL,
   },
 };

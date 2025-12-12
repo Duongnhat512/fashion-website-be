@@ -11,6 +11,7 @@ import {
 } from '../../../dtos/response/tax_report';
 import OrderStatus from '../../../models/enum/order_status.enum';
 import { PaymentMethod } from '../../../models/enum/payment_method.enum';
+import { config } from '../../../config/env';
 
 export class TaxReportService implements ITaxReportService {
   private readonly taxReportRepository: TaxReportRepository;
@@ -147,11 +148,11 @@ export class TaxReportService implements ITaxReportService {
         year,
       },
       companyInfo: {
-        name: 'Công ty TNHH Thời Trang', // Cần lấy từ cấu hình
-        taxCode: '0123456789', // Cần lấy từ cấu hình
-        address: '123 Đường ABC, Quận XYZ, TP.HCM',
-        phone: '0123 456 789',
-        email: 'info@fashion.com',
+        name: config.companyInfo.name,
+        taxCode: config.companyInfo.taxCode,
+        address: config.companyInfo.address,
+        phone: config.companyInfo.phone,
+        email: config.companyInfo.email,
       },
       outputVat: {
         details: outputVatDetails,
@@ -236,8 +237,8 @@ export class TaxReportService implements ITaxReportService {
         isAnnual: isAnnual || !quarter,
       },
       companyInfo: {
-        name: 'Công ty TNHH Thời Trang',
-        taxCode: '0123456789',
+        name: config.companyInfo.name,
+        taxCode: config.companyInfo.taxCode,
         businessSector: 'Bán lẻ quần áo, thời trang',
         sectorPercentage: 100,
       },
@@ -288,8 +289,8 @@ export class TaxReportService implements ITaxReportService {
         toDate: this.getDateRange(year, month, quarter).endDate.toISOString(),
       },
       companyInfo: {
-        name: 'Công ty TNHH Thời Trang',
-        taxCode: '0123456789',
+        name: config.companyInfo.name,
+        taxCode: config.companyInfo.taxCode,
       },
       details: [],
       summary: {
@@ -437,10 +438,10 @@ export class TaxReportService implements ITaxReportService {
       reportDate: endDate.toISOString(),
       preparedDate: new Date().toISOString(),
       companyInfo: {
-        name: 'Công ty TNHH Thời Trang',
-        taxCode: '0123456789',
-        address: '123 Đường ABC, Quận XYZ, TP.HCM',
-        legalRepresentative: 'Nguyễn Văn A',
+        name: config.companyInfo.name,
+        taxCode: config.companyInfo.taxCode,
+        address: config.companyInfo.address,
+        legalRepresentative: config.companyInfo.name,
       },
       balanceSheet,
       incomeStatement,
