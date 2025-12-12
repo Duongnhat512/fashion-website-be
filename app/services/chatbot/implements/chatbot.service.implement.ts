@@ -748,119 +748,102 @@ export class ChatbotService implements IChatbotService {
    */
   private async handleSearchProducts(args: any): Promise<any> {
     const { query, category, limit = 5 } = args;
-
+  
     try {
-      // Step 1: Generate embedding for user query
-      const queryEmbedding = await this.embeddingService.generateEmbedding(
-        query,
-      );
-
-      // Step 2: Retrieve products using semantic search
-      // First try Redis Search (full-text)
-      let products = await this.productService.searchProducts(
-        query,
-        category,
-        undefined,
-        'desc',
-        'createdAt',
-        1,
-        limit * 2, // Get more results for filtering
-      );
-
-      // Step 3: If we have embeddings in DB, do semantic search
-      // Otherwise, use the Redis search results
-      if (products.products.length > 0) {
-        // Filter and rank by semantic similarity if embeddings exist
-        const productsWithSimilarity = await Promise.all(
-          products.products.map(async (product) => {
-            try {
-              const productEntity = await this.productRepository.getProductById(
-                product.id,
-              );
-              const filteredProduct = await this.filterProductVariantsWithStock(
-                productEntity,
-              );
-
-              if (!filteredProduct) {
-                return { product: null, similarity: 0 };
-              }
-
-              // Get embedding from Redis
-              const productEmbedding =
-                await this.productService.getProductEmbedding(product.id);
-
-              if (productEmbedding && productEmbedding.length === 768) {
-                try {
-                  const similarity = this.embeddingService.cosineSimilarity(
-                    queryEmbedding,
-                    productEmbedding,
-                  );
-                  return { product: filteredProduct, similarity };
-                } catch (error) {
-                  logger.error(
-                    `Error calculating similarity for product ${product.id}:`,
-                    error,
-                  );
-                }
-              }
-
-              const textMatch = this.calculateTextMatch(query, filteredProduct);
-              return { product: filteredProduct, similarity: textMatch };
-            } catch (error) {
-              logger.error(
-                `Error preparing product ${product.id} for recommendation:`,
-                error,
-              );
-              return { product: null, similarity: 0 };
+      const queryEmbedding = await this.embeddingService.generateEmbedding(query);
+      
+      const queryEmbeddingBuffer = Buffer.from(new Float32Array(queryEmbedding).buffer);
+  
+      try {
+        const filterQuery = category 
+          ? `@categoryId:{${category}} @status:{active}`
+          : `@status:{active}`;
+        
+        const results = (await redis.call(
+          'FT.SEARCH',
+          'idx:products',
+          `${filterQuery}=>[KNN ${limit * 2} @embedding $vec_param AS score]`,
+          'PARAMS',
+          '2',
+          'vec_param',
+          queryEmbeddingBuffer,
+          'SORTBY',
+          'score',
+          'ASC',
+          'LIMIT',
+          '0',
+          (limit * 2).toString(),
+          'DIALECT',
+          '2',
+        )) as any[];
+  
+        const products = this.parseRedisKNNResults(results);
+  
+        const filteredProducts: ProductResponseDto[] = [];
+        
+        for (const redisProduct of products) {
+          try {
+            const productEntity = await this.productRepository.getProductById(
+              redisProduct.id,
+            );
+            const filteredProduct = await this.filterProductVariantsWithStock(
+              productEntity,
+            );
+            
+            if (filteredProduct) {
+              filteredProducts.push(filteredProduct);
+              if (filteredProducts.length >= limit) break;
             }
-          }),
-        );
-
-        const filteredProducts = productsWithSimilarity
-          .filter((item) => item.product !== null)
-          .sort((a, b) => b.similarity - a.similarity)
-          .slice(0, limit)
-          .map((item) => item.product as ProductResponseDto);
-
+          } catch (error) {
+            logger.error(
+              `Error filtering product ${redisProduct.id} variants by stock:`,
+              error,
+            );
+          }
+        }
+  
         return {
           success: true,
-          products: filteredProducts,
+          products: filteredProducts.slice(0, limit),
           count: filteredProducts.length,
         };
-      }
-
-      // Fallback: search in database
-      const dbProductsRaw = await this.productService.searchProducts(
-        query,
-        category,
-        undefined,
-        'desc',
-        'createdAt',
-        1,
-        limit,
-      );
-
-      const dbProducts: ProductResponseDto[] = [];
-
-      for (const product of dbProductsRaw.products) {
-        try {
-          const filtered = await this.filterProductVariantsWithStock(product);
-          if (filtered) {
-            dbProducts.push(filtered);
+      } catch (error: any) {
+        logger.warn(
+          `Vector search failed for query "${query}", falling back to full-text search:`,
+          error.message,
+        );
+        
+        const products = await this.productService.searchProducts(
+          query,
+          category,
+          undefined,
+          'desc',
+          'createdAt',
+          1,
+          limit,
+        );
+  
+        const dbProducts: ProductResponseDto[] = [];
+        for (const product of products.products) {
+          try {
+            const filtered = await this.filterProductVariantsWithStock(product);
+            if (filtered) {
+              dbProducts.push(filtered);
+            }
+          } catch (error) {
+            logger.error(
+              `Error filtering product ${product.id} variants by stock:`,
+              error,
+            );
           }
-        } catch (error) {
-          logger.error(
-            `Error filtering product ${product.id} variants by stock:`,
-            error,
-          );
         }
+  
+        return {
+          success: true,
+          products: dbProducts,
+          count: dbProducts.length,
+        };
       }
-
-      return {
-        success: true,
-        products: dbProducts,
-        count: dbProducts.length,
-      };
     } catch (error) {
       logger.error('Error in handleSearchProducts:', error);
       return {
@@ -869,6 +852,49 @@ export class ChatbotService implements IChatbotService {
         error: (error as Error).message,
       };
     }
+  }
+  
+  private parseRedisKNNResults(results: any[]): any[] {
+    if (!results || results.length < 2) {
+      return [];
+    }
+  
+    const products: any[] = [];
+    for (let i = 1; i < results.length; i += 2) {
+      const productKey = results[i] as string;
+      const productData = results[i + 1] as any[];
+  
+      if (!productKey || !productData) {
+        continue;
+      }
+  
+      const product: any = {};
+      for (let j = 0; j < productData.length; j += 2) {
+        const key = productData[j];
+        const value = productData[j + 1];
+  
+        if (key === 'createdAt' || key === 'updatedAt') {
+          product[key] = new Date(parseInt(value));
+        } else if (key === 'ratingAverage') {
+          product[key] = parseFloat(value);
+        } else if (key === 'ratingCount') {
+          product[key] = parseInt(value);
+        } else if (key === 'variants') {
+          try {
+            product[key] = JSON.parse(value);
+          } catch (error) {
+            product[key] = [];
+          }
+        } else if (key === 'score') {
+          product._score = parseFloat(value);
+        } else if (key !== 'embedding') {
+          product[key] = value;
+        }
+      }
+      products.push(product);
+    }
+  
+    return products;
   }
 
   /**
