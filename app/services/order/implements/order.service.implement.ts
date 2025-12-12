@@ -24,6 +24,7 @@ import { VoucherService } from '../../voucher/implements/voucher.service.impleme
 import { Voucher } from '../../../models/voucher.model';
 import { IProductService } from '../../product/product.service.interface';
 import { ProductService } from '../../product/implements/product.service.implement';
+import logger from '../../../utils/logger';
 
 export class OrderService implements IOrderService {
   private readonly orderRepository: OrderRepository;
@@ -294,14 +295,63 @@ export class OrderService implements IOrderService {
   ): Promise<OrderResponseDto> {
     const order = await this.orderRepository.getOrderById(orderId);
     if (!order) throw new Error('Không tìm thấy đơn hàng');
-
+  
     const priority = this.getOrderStatusPriority(status);
     const currentPriority = this.getOrderStatusPriority(order.status);
-
+  
     if (priority < currentPriority || priority - currentPriority != 1) {
       throw new Error('Trạng thái đơn hiện tại không cho phép cập nhật');
     }
-
+  
+    if (
+      (status === OrderStatus.DELIVERED || status === OrderStatus.COMPLETED) &&
+      (order.status !== OrderStatus.DELIVERED && order.status !== OrderStatus.COMPLETED)
+    ) {
+      const items = await this.orderItemRepository.getOrderItemsByOrderId(orderId);
+  
+      for (const item of items) {
+        const inv = await this.inventoryRepository.getInventoryByVariantIdAndWarehouseId(
+          item.variant.id,
+          item.warehouse.id,
+        );
+  
+        if (!inv) {
+          logger.warn(
+            `Không tìm thấy inventory cho variant ${item.variant.id} tại warehouse ${item.warehouse.id}`,
+          );
+          continue;
+        }
+  
+        if (inv.reserved < item.quantity) {
+          throw new Error(
+            `Reserved không đủ để trừ kho cho variant ${item.variant.id}`,
+          );
+        }
+  
+        inv.reserved -= item.quantity;
+        inv.onHand -= item.quantity;
+  
+        if (inv.onHand < 0) {
+          throw new Error(
+            `onHand không thể âm cho variant ${item.variant.id}`,
+          );
+        }
+  
+        await this.inventoryRepository.updateInventory(inv);
+      }
+  
+      const updatedProductIds = new Set<string>();
+      for (const item of items) {
+        if (!updatedProductIds.has(item.product.id)) {
+          const product = await this.productCacheService.getProduct(item.product.id);
+          if (product) {
+            await this.productCacheService.indexProduct(product);
+          }
+          updatedProductIds.add(item.product.id);
+        }
+      }
+    }
+  
     order.status = status;
     await this.orderRepository.updateOrder(order);
     return order;
