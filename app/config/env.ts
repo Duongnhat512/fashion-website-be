@@ -54,7 +54,7 @@ const envSchema = Joi.object({
   CLOUDINARY_API_KEY: Joi.string().required(),
   CLOUDINARY_API_SECRET: Joi.string().required(),
 
-  // Gemini AI
+  // Gemini AI (for embeddings only)
   GEMINI_API_KEY: Joi.string().when('GEMINI_API_KEYS', {
     is: Joi.exist(),
     then: Joi.optional(),
@@ -62,6 +62,10 @@ const envSchema = Joi.object({
   }), // Deprecated, use GEMINI_API_KEYS instead
   GEMINI_API_KEYS: Joi.string().optional(), // Comma-separated list of API keys
   GEMINI_MODEL: Joi.string().default('gemini-1.5-flash'),
+
+  // Groq AI (for chatbot responses)
+  GROQ_API_KEY: Joi.string().required(),
+  GROQ_MODEL: Joi.string().default('llama-3.3-70b-versatile'),
 
   // Company Info
   COMPANY_NAME: Joi.string().required(),
@@ -132,6 +136,10 @@ export const config = {
       ? [envVars.GEMINI_API_KEY.trim()]
       : [],
     model: envVars.GEMINI_MODEL || 'gemini-2.5-flash',
+  },
+  groq: {
+    apiKey: envVars.GROQ_API_KEY,
+    model: envVars.GROQ_MODEL || 'llama-3.3-70b-versatile',
   },
   companyInfo: {
     name: envVars.COMPANY_NAME,

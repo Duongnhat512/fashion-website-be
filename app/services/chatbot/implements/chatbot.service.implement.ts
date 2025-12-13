@@ -1,8 +1,4 @@
-import {
-  FunctionCallingMode,
-  GoogleGenerativeAI,
-  SchemaType,
-} from '@google/generative-ai';
+import Groq from 'groq-sdk';
 import { config } from '../../../config/env';
 import {
   ChatbotRequest,
@@ -24,10 +20,9 @@ import InventoryRepository from '../../../repositories/inventory.repository';
 import { IVariantService } from '../../product/variant.service.interface';
 import { VariantService } from '../../product/implements/variant.service.implement';
 import OrderStatus from '../../../models/enum/order_status.enum';
-import { GeminiKeyManager } from '../../gemini_key_manager/implements/gemini_key_manager.service.implement';
 
 export class ChatbotService implements IChatbotService {
-  private keyManager: GeminiKeyManager;
+  private groqClient: Groq;
   private memoryService: ConversationMemoryService;
   private productService: ProductService;
   private embeddingService: EmbeddingService;
@@ -37,7 +32,7 @@ export class ChatbotService implements IChatbotService {
   private inventoryRepository: InventoryRepository;
   private variantService: IVariantService;
 
-  // System instruction for Gemini (static, only create model with it)
+  // System instruction for Groq
   private readonly systemInstruction = `
     Bạn là một trợ lý bán hàng thời trang chuyên nghiệp, thân thiện và nhiệt tình của cửa hàng. 
     Bạn có kiến thức sâu về thời trang, xu hướng, phong cách, và luôn sẵn sàng tư vấn khách hàng để họ tìm được sản phẩm phù hợp nhất.
@@ -314,8 +309,10 @@ export class ChatbotService implements IChatbotService {
       `;
 
   constructor() {
-    // Initialize key manager
-    this.keyManager = new GeminiKeyManager(config.gemini.apiKeys);
+    // Initialize Groq client
+    this.groqClient = new Groq({
+      apiKey: config.groq.apiKey,
+    });
     this.memoryService = new ConversationMemoryService();
     this.productService = new ProductService();
     this.embeddingService = new EmbeddingService();
@@ -327,182 +324,155 @@ export class ChatbotService implements IChatbotService {
   }
 
   /**
-   * Get a Gemini model instance with an available API key
+   * Convert conversation history from internal format to Groq/OpenAI format
    */
-  private async getModel(): Promise<{ model: any; apiKey: string }> {
-    const apiKey = await this.keyManager.getAvailableKey();
-    if (!apiKey) {
-      throw new Error(
-        'No available Gemini API keys. All keys have reached daily limit.',
-      );
+  private convertHistoryToGroqFormat(
+    history: Array<{ role: string; parts: any[] }>,
+  ): Array<{ role: 'user' | 'assistant' | 'system'; content: string }> {
+    const groqMessages: Array<{
+      role: 'user' | 'assistant' | 'system';
+      content: string;
+    }> = [];
+
+    for (const msg of history) {
+      // Extract text from parts
+      const textParts = msg.parts
+        .filter((part: any) => part.text)
+        .map((part: any) => part.text);
+      const content = textParts.join('\n').trim();
+
+      if (!content) continue;
+
+      // Convert role: 'model' -> 'assistant', 'user' -> 'user', 'function' -> skip (handle separately)
+      if (msg.role === 'function') continue;
+
+      const role =
+        msg.role === 'model' ? 'assistant' : (msg.role as 'user' | 'assistant');
+
+      groqMessages.push({ role, content });
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: config.gemini.model,
-      systemInstruction: this.systemInstruction,
-      tools: [
-        {
-          functionDeclarations: [
-            {
-              name: 'searchProducts',
-              description:
-                'Tìm kiếm sản phẩm. QUAN TRỌNG: Hãy trích xuất TỪ KHÓA CHÍNH về sản phẩm từ câu nói của khách (Ví dụ: khách nói "tìm cho anh quần kaki đi", hãy search query="quần kaki"). Đừng đưa các từ vô nghĩa như "tôi muốn", "tìm giúp", "màu gì đẹp" vào query.',
-              parameters: {
-                type: SchemaType.OBJECT,
-                properties: {
-                  query: {
-                    type: SchemaType.STRING,
-                    description: 'Từ khóa tìm kiếm',
-                  },
-                  category: {
-                    type: SchemaType.STRING,
-                    description: 'Danh mục (tùy chọn)',
-                  },
-                  limit: {
-                    type: SchemaType.NUMBER,
-                    description: 'Số lượng (mặc định: 5)',
-                  },
-                },
-                required: ['query'],
+    return groqMessages;
+  }
+
+  /**
+   * Get Groq function definitions (OpenAI-compatible format)
+   */
+  private getGroqFunctions(): any[] {
+    return [
+      {
+        type: 'function',
+        function: {
+          name: 'searchProducts',
+          description:
+            'Tìm kiếm sản phẩm. QUAN TRỌNG: Hãy trích xuất TỪ KHÓA CHÍNH về sản phẩm từ câu nói của khách (Ví dụ: khách nói "tìm cho anh quần kaki đi", hãy search query="quần kaki"). Đừng đưa các từ vô nghĩa như "tôi muốn", "tìm giúp", "màu gì đẹp" vào query.',
+          parameters: {
+            type: 'object',
+            properties: {
+              query: {
+                type: 'string',
+                description: 'Từ khóa tìm kiếm',
+              },
+              category: {
+                type: 'string',
+                description: 'Danh mục (tùy chọn)',
+              },
+              limit: {
+                type: 'number',
+                description: 'Số lượng (mặc định: 5)',
               },
             },
-            {
-              name: 'addToCart',
-              description: 'Thêm vào giỏ hàng',
-              parameters: {
-                type: SchemaType.OBJECT,
-                properties: {
-                  productId: {
-                    type: SchemaType.STRING,
-                    description: 'ID sản phẩm',
-                  },
-                  variantId: {
-                    type: SchemaType.STRING,
-                    description: 'ID biến thể',
-                  },
-                  quantity: {
-                    type: SchemaType.NUMBER,
-                    description: 'Số lượng (mặc định: 1)',
-                  },
-                },
-                required: ['productId', 'variantId'],
-              },
-            },
-            {
-              name: 'createOrder',
-              description:
-                'Tạo đơn hàng. QUAN TRỌNG: Chỉ gọi hàm này khi đã có ĐẦY ĐỦ: tên, sđt, và địa chỉ gồm 3 cấp (Xã/Phường, Quận/Huyện, Tỉnh/Thành phố). Nếu thiếu bất kỳ cấp nào của địa chỉ, hãy hỏi lại người dùng.',
-              parameters: {
-                type: SchemaType.OBJECT,
-                properties: {
-                  fullName: {
-                    type: SchemaType.STRING,
-                    description: 'Tên người nhận',
-                  },
-                  phone: {
-                    type: SchemaType.STRING,
-                    description: 'Số điện thoại',
-                  },
-                  fullAddress: {
-                    type: SchemaType.STRING,
-                    description: 'Địa chỉ',
-                  },
-                  city: {
-                    type: SchemaType.STRING,
-                    description:
-                      'Tên Tỉnh hoặc Thành phố trực thuộc trung ương (VD: Hà Nội, TP.HCM)',
-                  },
-                  district: {
-                    type: SchemaType.STRING,
-                    description:
-                      'Tên Quận hoặc Huyện (VD: Quận 1, Huyện Củ Chi)',
-                  },
-                  ward: {
-                    type: SchemaType.STRING,
-                    description: 'Tên Phường hoặc Xã (VD: Phường Bến Nghé)',
-                  },
-                  isCOD: {
-                    type: SchemaType.BOOLEAN,
-                    description: 'Thanh toán COD',
-                  },
-                },
-                required: [
-                  'fullName',
-                  'phone',
-                  'fullAddress',
-                  'city',
-                  'district',
-                  'ward',
-                ],
-              },
-            },
-          ],
-        },
-      ],
-      toolConfig: {
-        functionCallingConfig: {
-          mode: FunctionCallingMode.AUTO,
+            required: ['query'],
+          },
         },
       },
-    });
-
-    return { model, apiKey };
+      {
+        type: 'function',
+        function: {
+          name: 'addToCart',
+          description: 'Thêm vào giỏ hàng',
+          parameters: {
+            type: 'object',
+            properties: {
+              productId: {
+                type: 'string',
+                description: 'ID sản phẩm',
+              },
+              variantId: {
+                type: 'string',
+                description: 'ID biến thể',
+              },
+              quantity: {
+                type: 'number',
+                description: 'Số lượng (mặc định: 1)',
+              },
+            },
+            required: ['productId', 'variantId'],
+          },
+        },
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'createOrder',
+          description:
+            'Tạo đơn hàng. QUAN TRỌNG: Chỉ gọi hàm này khi đã có ĐẦY ĐỦ: tên, sđt, và địa chỉ gồm 3 cấp (Xã/Phường, Quận/Huyện, Tỉnh/Thành phố). Nếu thiếu bất kỳ cấp nào của địa chỉ, hãy hỏi lại người dùng.',
+          parameters: {
+            type: 'object',
+            properties: {
+              fullName: {
+                type: 'string',
+                description: 'Tên người nhận',
+              },
+              phone: {
+                type: 'string',
+                description: 'Số điện thoại',
+              },
+              fullAddress: {
+                type: 'string',
+                description: 'Địa chỉ',
+              },
+              city: {
+                type: 'string',
+                description:
+                  'Tên Tỉnh hoặc Thành phố trực thuộc trung ương (VD: Hà Nội, TP.HCM)',
+              },
+              district: {
+                type: 'string',
+                description: 'Tên Quận hoặc Huyện (VD: Quận 1, Huyện Củ Chi)',
+              },
+              ward: {
+                type: 'string',
+                description: 'Tên Phường hoặc Xã (VD: Phường Bến Nghé)',
+              },
+              isCOD: {
+                type: 'boolean',
+                description: 'Thanh toán COD',
+              },
+            },
+            required: [
+              'fullName',
+              'phone',
+              'fullAddress',
+              'city',
+              'district',
+              'ward',
+            ],
+          },
+        },
+      },
+    ];
   }
 
   async chat(request: ChatbotRequest): Promise<ChatbotResponse> {
-    const maxRetries = 3; // Try up to 3 different keys
     const sessionId = request.sessionId || request.userId;
     const userMessage = request.message;
 
-    // Get conversation history - limit to 3-4 messages to avoid 503 errors
-    // Gemini 503 errors are caused by oversized requests
-    // Get conversation history - increased limit for better context
+    // Get conversation history
     const history = await this.memoryService.getLimitedHistory(sessionId, 20);
 
-    // Convert history to Gemini format and truncate long messages
-    let chatHistory = history.map((msg) => {
-      const parts = msg.parts.map((part: any) => {
-        if (part.text) {
-          return { text: this.truncateText(part.text, 1000) };
-        }
-        return part;
-      });
-      return {
-        role: msg.role === 'user' ? 'user' : 'model',
-        parts,
-      };
-    });
-
-    // Ensure history starts with 'user' role (Gemini requirement)
-    // If first message is 'model', remove it or add a dummy 'user' message
-    if (chatHistory.length > 0 && chatHistory[0].role !== 'user') {
-      // Option 1: Remove the first 'model' message
-      chatHistory = chatHistory.slice(1);
-
-      // Option 2: Or add a dummy user message at the beginning
-      // chatHistory = [{ role: 'user', parts: [{ text: 'Hello' }] }, ...chatHistory];
-    }
-
-    // Ensure history alternates between user and model
-    // Remove consecutive messages with same role
-    const cleanedHistory = [];
-    for (let i = 0; i < chatHistory.length; i++) {
-      const current = chatHistory[i];
-      const previous = cleanedHistory[cleanedHistory.length - 1];
-
-      // Skip if same role as previous (except for first message)
-      if (previous && previous.role === current.role) {
-        continue;
-      }
-
-      cleanedHistory.push(current);
-    }
-
-    // Final check: ensure first message is 'user'
-    if (cleanedHistory.length > 0 && cleanedHistory[0].role !== 'user') {
-      cleanedHistory.shift(); // Remove first message if it's not 'user'
-    }
+    // Convert history to Groq format
+    const groqHistory = this.convertHistoryToGroqFormat(history);
 
     // Truncate user message if too long
     const truncatedMessage = this.truncateText(userMessage, 1000);
@@ -513,124 +483,102 @@ export class ChatbotService implements IChatbotService {
       parts: [{ text: truncatedMessage }],
     });
 
-    // Try with different API keys if one fails
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-      let apiKey: string | null = null;
+    try {
+      // Prepare messages for Groq
+      const messages: Array<{
+        role: 'system' | 'user' | 'assistant';
+        content: string;
+      }> = [
+        {
+          role: 'system',
+          content: this.systemInstruction,
+        },
+        ...groqHistory,
+        {
+          role: 'user',
+          content: truncatedMessage,
+        },
+      ];
 
-      try {
-        // Get model with available API key
-        const { model, apiKey: key } = await this.getModel();
-        apiKey = key;
+      // Call Groq API
+      const completion = await this.groqClient.chat.completions.create({
+        model: config.groq.model,
+        messages: messages as any,
+        tools: this.getGroqFunctions(),
+        tool_choice: 'auto',
+        temperature: 0.7,
+        max_tokens: 2000,
+      });
 
-        // Start chat session
-        const chat = model.startChat({
-          history: cleanedHistory.length > 0 ? cleanedHistory : undefined,
-        });
+      const response = completion.choices[0]?.message;
 
-        // Send message to Gemini
-        const result = await chat.sendMessage(truncatedMessage);
-        const response = result.response;
-
-        // Mark key as used if successful
-        if (apiKey) {
-          await this.keyManager.markKeyUsedByKey(apiKey).catch((err) => {
-            logger.warn('Failed to mark key as used:', err);
-          });
-        }
-
-        // Process response (same logic as before)
-        return await this.processChatResponse(
-          response,
-          request,
-          sessionId,
-          chat,
-        );
-      } catch (error: any) {
-        // Check if it's a rate limit error (429) or quota exceeded
-        const isRateLimitError =
-          error.code === 429 ||
-          error.message?.includes('429') ||
-          error.message?.includes('quota') ||
-          error.message?.includes('rate limit') ||
-          error.message?.includes('RESOURCE_EXHAUSTED');
-
-        // Check if it's an API key error
-        const isApiKeyError =
-          error.message?.includes('API_KEY') ||
-          error.message?.includes('API key') ||
-          error.code === 401 ||
-          error.code === 403 ||
-          error.message?.includes('No available Gemini API keys');
-
-        if (isRateLimitError || isApiKeyError) {
-          // Mark key as used (even though it failed, it counted towards quota)
-          if (apiKey) {
-            await this.keyManager.markKeyUsedByKey(apiKey).catch((err) => {
-              logger.warn('Failed to mark key as used:', err);
-            });
-          }
-
-          // Try next key if available
-          if (attempt < maxRetries - 1) {
-            logger.warn(
-              `API key failed (rate limit/error), trying next key... (attempt ${
-                attempt + 1
-              }/${maxRetries})`,
-            );
-            continue; // Try next key
-          }
-        }
-
-        // For other errors, log and throw
-        logger.error(`Error in chatbot chat (attempt ${attempt + 1}):`, {
-          message: error.message,
-          code: error.code,
-        });
-
-        // If not rate limit error and last attempt, throw
-        if (!isRateLimitError && !isApiKeyError) {
-          throw error;
-        }
-
-        // If last attempt and rate limit error, return error response
-        if (attempt === maxRetries - 1) {
-          return {
-            message:
-              'Xin lỗi, hệ thống đang quá tải. Vui lòng thử lại sau ít phút.',
-            sessionId: request.userId,
-          };
-        }
+      if (!response) {
+        throw new Error('No response from Groq API');
       }
-    }
 
-    // Should not reach here, but just in case
-    return {
-      message:
-        'Xin lỗi, tôi gặp lỗi khi xử lý yêu cầu của bạn. Vui lòng thử lại sau.',
-      sessionId: request.userId,
-    };
+      // Process response
+      return await this.processGroqResponse(
+        response,
+        request,
+        sessionId,
+        messages,
+      );
+    } catch (error: any) {
+      logger.error('Error in chatbot chat:', {
+        message: error.message,
+        code: error.code,
+        stack: error.stack,
+      });
+
+      // Return error response
+      return {
+        message:
+          'Xin lỗi, tôi gặp lỗi khi xử lý yêu cầu của bạn. Vui lòng thử lại sau.',
+        sessionId: request.userId,
+      };
+    }
   }
 
   /**
-   * Process chat response (extracted from chat method for reuse)
+   * Process Groq chat response
    */
-  private async processChatResponse(
+  private async processGroqResponse(
     response: any,
     request: ChatbotRequest,
     sessionId: string,
-    chat: any,
+    messages: Array<{ role: string; content: string }>,
   ): Promise<ChatbotResponse> {
     // Check if function calling is needed
-    const functionCalls = response.functionCalls();
-    let functionResults: any[] = [];
+    const toolCalls = response.tool_calls;
     let products: ProductResponseDto[] = [];
     let requiresAction: 'add_to_cart' | 'create_order' | null = null;
 
-    if (functionCalls && functionCalls.length > 0) {
+    if (toolCalls && toolCalls.length > 0) {
       // Execute function calls
-      for (const funcCall of functionCalls) {
-        const functionName = funcCall.name;
-        const args = funcCall.args;
+      const toolMessages: Array<{
+        role: 'tool';
+        tool_call_id: string;
+        content: string;
+      }> = [];
+
+      for (const toolCall of toolCalls) {
+        const functionName = toolCall.function.name;
+        let args: any;
+
+        try {
+          args = JSON.parse(toolCall.function.arguments);
+        } catch (error) {
+          logger.error(
+            `Error parsing function arguments for ${functionName}:`,
+            error,
+          );
+          toolMessages.push({
+            role: 'tool',
+            tool_call_id: toolCall.id,
+            content: JSON.stringify({ error: 'Invalid function arguments' }),
+          });
+          continue;
+        }
 
         try {
           let functionResult: any;
@@ -664,44 +612,72 @@ export class ChatbotService implements IChatbotService {
             functionName,
             functionResult,
           );
-          functionResults.push({
-            functionResponse: {
-              name: functionName,
-              response: compressedResult, // Already an object, not JSON string
-            },
+
+          toolMessages.push({
+            role: 'tool',
+            tool_call_id: toolCall.id,
+            content: JSON.stringify(compressedResult),
           });
         } catch (error) {
           logger.error(`Error executing function ${functionName}:`, error);
-          functionResults.push({
-            functionResponse: {
-              name: functionName,
-              response: {
-                error: (error as Error).message,
-              },
-            },
+          toolMessages.push({
+            role: 'tool',
+            tool_call_id: toolCall.id,
+            content: JSON.stringify({
+              error: (error as Error).message,
+            }),
           });
         }
       }
 
       // Send function results back to model for final response
-      const finalResult = await chat.sendMessage(functionResults);
-      const finalResponse = finalResult.response;
+      const assistantMessage: any = {
+        role: 'assistant',
+        tool_calls: toolCalls,
+      };
+      
+      // Only include content if it exists
+      if (response.content) {
+        assistantMessage.content = response.content;
+      }
 
-      // Get clean message for user (remove any system context if exists)
-      let userMessage = finalResponse.text();
-      // Remove System Context section if Gemini accidentally included it
+      const finalMessages = [
+        ...messages,
+        assistantMessage,
+        ...toolMessages,
+      ];
+
+      const finalCompletion = await this.groqClient.chat.completions.create({
+        model: config.groq.model,
+        messages: finalMessages as any,
+        tools: this.getGroqFunctions(),
+        tool_choice: 'auto',
+        temperature: 0.7,
+        max_tokens: 2000,
+      });
+
+      const finalResponse = finalCompletion.choices[0]?.message;
+      const userMessage = finalResponse?.content || response.content || '';
+
+      // Remove System Context section if accidentally included
       const systemContextRegex =
         /\n\n\[System Context[^\]]*\]:?\s*\n[\s\S]*?(?=\n\n|$)/i;
-      userMessage = userMessage.replace(systemContextRegex, '').trim();
+      const cleanMessage = userMessage.replace(systemContextRegex, '').trim();
 
       // Prepare history text (with system context for bot's future reference)
-      let historyText = userMessage;
+      let historyText = cleanMessage;
       if (products && products.length > 0) {
         const productContext = products
           .map(
             (p) =>
               `Product: ${p.name} (ID: ${p.id}). Variants: ${p.variants
-                .map((v) => `[Color: ${v.color}, Size: ${v.size}, ID: ${v.id}]`)
+                .map((v) => {
+                  const colorName =
+                    typeof v.color === 'object'
+                      ? v.color.name
+                      : v.color || '';
+                  return `[Color: ${colorName}, Size: ${v.size}, ID: ${v.id}]`;
+                })
                 .join(', ')}`,
           )
           .join('\n');
@@ -717,14 +693,14 @@ export class ChatbotService implements IChatbotService {
 
       // Return clean message to user (without system context)
       return {
-        message: userMessage,
+        message: cleanMessage,
         products: this.formatProductsForResponse(products),
         requiresAction,
         sessionId: request.userId,
       };
     } else {
       // No function calling, return direct response
-      const responseText = response.text();
+      const responseText = response.content || '';
 
       await this.memoryService.addMessage(sessionId, {
         role: 'model',
