@@ -38,12 +38,11 @@ export class EmbeddingScheduler {
       // Redis Vector Search requires binary format (Blob) for FLOAT32 vectors
       const embeddingKey = `product:${product.id}`;
       const embeddingBuffer = Buffer.from(new Float32Array(embedding).buffer);
-      
+
       // Store as binary blob for vector search (FT.SEARCH KNN query)
       // Also keep JSON string for backward compatibility if needed
       await redis.hset(embeddingKey, {
         embedding: embeddingBuffer,
-        embedding_json: JSON.stringify(embedding), // For debugging/compatibility
       });
 
       logger.info(`Generated embedding for product: ${productId}`);
