@@ -24,6 +24,7 @@ import { VoucherService } from '../../voucher/implements/voucher.service.impleme
 import { Voucher } from '../../../models/voucher.model';
 import { IProductService } from '../../product/product.service.interface';
 import { ProductService } from '../../product/implements/product.service.implement';
+import { AddressRepository } from '../../../repositories/address.repository';
 import logger from '../../../utils/logger';
 
 export class OrderService implements IOrderService {
@@ -37,6 +38,7 @@ export class OrderService implements IOrderService {
   private readonly recommendationService: RecommendationService;
   private readonly voucherService: IVoucherService;
   private readonly productService: IProductService;
+  private readonly addressRepository: AddressRepository;
 
   constructor() {
     this.orderRepository = new OrderRepository();
@@ -49,6 +51,7 @@ export class OrderService implements IOrderService {
     this.recommendationService = new RecommendationService();
     this.voucherService = new VoucherService();
     this.productService = new ProductService();
+    this.addressRepository = new AddressRepository();
   }
 
   async updateOrder(order: UpdateOrderRequestDto): Promise<OrderResponseDto> {
@@ -74,6 +77,23 @@ export class OrderService implements IOrderService {
   async createOrder(order: CreateOrderRequestDto): Promise<OrderResponseDto> {
     try {
       return await this.dataSource.transaction(async (m) => {
+        // Validate and get address
+        if (!order.addressId) {
+          throw new Error('Vui lòng chọn địa chỉ giao hàng');
+        }
+
+        const address = await this.addressRepository.findById(order.addressId);
+        if (!address) {
+          throw new Error('Không tìm thấy địa chỉ');
+        }
+
+        // Verify address belongs to user
+        if (address.user.id !== order.user.id) {
+          throw new Error('Địa chỉ không thuộc về người dùng này');
+        }
+
+        order.address = address;
+
         const warehouseAllocations: any[] = [];
 
         if (!order.items || order.items.length === 0) {

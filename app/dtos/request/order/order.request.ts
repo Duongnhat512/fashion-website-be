@@ -1,4 +1,4 @@
-import { OrderShippingAddress } from '../../../models/order_shipping_address.model';
+import Address from '../../../models/address.model';
 import User from '../../../models/user.model';
 import OrderStatus from '../../../models/enum/order_status.enum';
 import { OrderItem } from '../../../models/order_item.model';
@@ -10,12 +10,12 @@ import {
   IsObject,
   IsOptional,
   IsString,
+  IsUUID,
   Max,
   Min,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { CreateOrderShippingAddressRequestDto } from './order_shipping_address.request';
 import { CreateOrderItemRequestDto } from './order_item.request';
 import { PaymentMethod } from '../../../models/enum/payment_method.enum';
 import { Voucher } from '../../../models/voucher.model';
@@ -45,17 +45,11 @@ export class CreateOrderRequestDto {
   @Min(0, { message: 'Phí vận chuyển phải là số lớn hơn 0' })
   shippingFee: number;
 
-  @IsOptional()
-  @IsObject({
-    message:
-      'Địa chỉ giao hàng phải là một đối tượng chứa thông tin địa chỉ đầy đủ',
-  })
-  @Type(() => CreateOrderShippingAddressRequestDto)
-  @ValidateNested({
-    message:
-      'Thông tin địa chỉ giao hàng không hợp lệ, vui lòng kiểm tra lại các trường bên trong',
-  })
-  shippingAddress: CreateOrderShippingAddressRequestDto;
+  @IsString({ message: 'ID địa chỉ phải là chuỗi hợp lệ' })
+  @IsUUID('4', { message: 'ID địa chỉ phải là UUID hợp lệ' })
+  addressId: string;
+
+  address?: Address;
 
   @IsOptional()
   @IsArray({ message: 'Danh sách sản phẩm phải là một mảng các sản phẩm' })
@@ -119,15 +113,11 @@ export class UpdateOrderRequestDto {
   items: OrderItem[];
 
   @IsOptional()
-  @IsObject({
-    message:
-      'Địa chỉ giao hàng phải là một đối tượng chứa thông tin địa chỉ đầy đủ',
-  })
-  @ValidateNested({
-    message:
-      'Thông tin địa chỉ giao hàng không hợp lệ, vui lòng kiểm tra lại các trường bên trong',
-  })
-  shippingAddress: OrderShippingAddress;
+  @IsString({ message: 'ID địa chỉ phải là chuỗi hợp lệ' })
+  @IsUUID('4', { message: 'ID địa chỉ phải là UUID hợp lệ' })
+  addressId?: string;
+
+  address?: Address;
 
   @IsOptional()
   @IsEnum(PaymentMethod, {

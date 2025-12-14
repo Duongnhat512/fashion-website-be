@@ -6,14 +6,13 @@ import {
   JoinColumn,
   ManyToOne,
   OneToMany,
-  OneToOne,
   PrimaryColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import User from './user.model';
 import OrderStatus from './enum/order_status.enum';
 import { OrderItem } from './order_item.model';
-import { OrderShippingAddress } from './order_shipping_address.model';
+import Address from './address.model';
 import { PaymentMethod } from './enum/payment_method.enum';
 import { Voucher } from './voucher.model';
 
@@ -68,12 +67,9 @@ export class Order {
   @OneToMany(() => OrderItem, (orderItem) => orderItem.order, { cascade: true })
   items: OrderItem[];
 
-  @OneToOne(
-    () => OrderShippingAddress,
-    (shippingAddress) => shippingAddress.order,
-    { cascade: true },
-  )
-  shippingAddress: OrderShippingAddress;
+  @ManyToOne(() => Address, { nullable: false })
+  @JoinColumn({ name: 'address_id' })
+  address: Address;
 
   @BeforeInsert()
   async generateCode() {

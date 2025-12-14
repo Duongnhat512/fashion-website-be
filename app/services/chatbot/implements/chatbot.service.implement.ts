@@ -19,6 +19,7 @@ import redis from '../../../config/redis.config';
 import InventoryRepository from '../../../repositories/inventory.repository';
 import { IVariantService } from '../../product/variant.service.interface';
 import { VariantService } from '../../product/implements/variant.service.implement';
+import { AddressRepository } from '../../../repositories/address.repository';
 import OrderStatus from '../../../models/enum/order_status.enum';
 
 export class ChatbotService implements IChatbotService {
@@ -31,6 +32,7 @@ export class ChatbotService implements IChatbotService {
   private orderService: OrderService;
   private inventoryRepository: InventoryRepository;
   private variantService: IVariantService;
+  private addressRepository: AddressRepository;
 
   // System instruction for Groq
   private readonly systemInstruction = `
@@ -321,6 +323,7 @@ export class ChatbotService implements IChatbotService {
     this.orderService = new OrderService();
     this.inventoryRepository = new InventoryRepository();
     this.variantService = new VariantService();
+    this.addressRepository = new AddressRepository();
   }
 
   /**
@@ -635,17 +638,13 @@ export class ChatbotService implements IChatbotService {
         role: 'assistant',
         tool_calls: toolCalls,
       };
-      
+
       // Only include content if it exists
       if (response.content) {
         assistantMessage.content = response.content;
       }
 
-      const finalMessages = [
-        ...messages,
-        assistantMessage,
-        ...toolMessages,
-      ];
+      const finalMessages = [...messages, assistantMessage, ...toolMessages];
 
       const finalCompletion = await this.groqClient.chat.completions.create({
         model: config.groq.model,
@@ -673,9 +672,7 @@ export class ChatbotService implements IChatbotService {
               `Product: ${p.name} (ID: ${p.id}). Variants: ${p.variants
                 .map((v) => {
                   const colorName =
-                    typeof v.color === 'object'
-                      ? v.color.name
-                      : v.color || '';
+                    typeof v.color === 'object' ? v.color.name : v.color || '';
                   return `[Color: ${colorName}, Size: ${v.size}, ID: ${v.id}]`;
                 })
                 .join(', ')}`,
@@ -724,17 +721,21 @@ export class ChatbotService implements IChatbotService {
    */
   private async handleSearchProducts(args: any): Promise<any> {
     const { query, category, limit = 5 } = args;
-  
+
     try {
-      const queryEmbedding = await this.embeddingService.generateEmbedding(query);
-      
-      const queryEmbeddingBuffer = Buffer.from(new Float32Array(queryEmbedding).buffer);
-  
+      const queryEmbedding = await this.embeddingService.generateEmbedding(
+        query,
+      );
+
+      const queryEmbeddingBuffer = Buffer.from(
+        new Float32Array(queryEmbedding).buffer,
+      );
+
       try {
-        const filterQuery = category 
+        const filterQuery = category
           ? `@categoryId:{${category}} @status:{active}`
           : `@status:{active}`;
-        
+
         const results = (await redis.call(
           'FT.SEARCH',
           'idx:products',
@@ -752,11 +753,11 @@ export class ChatbotService implements IChatbotService {
           'DIALECT',
           '2',
         )) as any[];
-  
+
         const products = this.parseRedisKNNResults(results);
-  
+
         const filteredProducts: ProductResponseDto[] = [];
-        
+
         for (const redisProduct of products) {
           try {
             const productEntity = await this.productRepository.getProductById(
@@ -765,7 +766,7 @@ export class ChatbotService implements IChatbotService {
             const filteredProduct = await this.filterProductVariantsWithStock(
               productEntity,
             );
-            
+
             if (filteredProduct) {
               filteredProducts.push(filteredProduct);
               if (filteredProducts.length >= limit) break;
@@ -777,7 +778,7 @@ export class ChatbotService implements IChatbotService {
             );
           }
         }
-  
+
         return {
           success: true,
           products: filteredProducts.slice(0, limit),
@@ -788,7 +789,7 @@ export class ChatbotService implements IChatbotService {
           `Vector search failed for query "${query}", falling back to full-text search:`,
           error.message,
         );
-        
+
         const products = await this.productService.searchProducts(
           query,
           category,
@@ -798,7 +799,7 @@ export class ChatbotService implements IChatbotService {
           1,
           limit,
         );
-  
+
         const dbProducts: ProductResponseDto[] = [];
         for (const product of products.products) {
           try {
@@ -813,7 +814,7 @@ export class ChatbotService implements IChatbotService {
             );
           }
         }
-  
+
         return {
           success: true,
           products: dbProducts,
@@ -829,26 +830,26 @@ export class ChatbotService implements IChatbotService {
       };
     }
   }
-  
+
   private parseRedisKNNResults(results: any[]): any[] {
     if (!results || results.length < 2) {
       return [];
     }
-  
+
     const products: any[] = [];
     for (let i = 1; i < results.length; i += 2) {
       const productKey = results[i] as string;
       const productData = results[i + 1] as any[];
-  
+
       if (!productKey || !productData) {
         continue;
       }
-  
+
       const product: any = {};
       for (let j = 0; j < productData.length; j += 2) {
         const key = productData[j];
         const value = productData[j + 1];
-  
+
         if (key === 'createdAt' || key === 'updatedAt') {
           product[key] = new Date(parseInt(value));
         } else if (key === 'ratingAverage') {
@@ -869,7 +870,7 @@ export class ChatbotService implements IChatbotService {
       }
       products.push(product);
     }
-  
+
     return products;
   }
 
@@ -1036,19 +1037,29 @@ export class ChatbotService implements IChatbotService {
         }),
       );
 
-      // Create order
-      const order = await this.orderService.createOrder({
-        user: { id: userId } as any,
-        status: OrderStatus.UNPAID as any,
-        items: orderItems as any,
-        shippingAddress: {
+      // Create or find address
+      let address = await this.addressRepository.findById(args.addressId || '');
+
+      if (!address) {
+        // Create new address if not found
+        address = await this.addressRepository.create({
+          user: { id: userId } as any,
           fullName,
           phone,
           fullAddress,
           city,
           district,
           ward,
-        },
+          isDefault: false,
+        });
+      }
+
+      // Create order
+      const order = await this.orderService.createOrder({
+        user: { id: userId } as any,
+        status: OrderStatus.UNPAID as any,
+        items: orderItems as any,
+        addressId: address.id,
         isCOD,
         discount: 0,
         shippingFee: 0, // Can be calculated based on address

@@ -1,7 +1,7 @@
 import { OrderItem } from '../../../models/order_item.model';
 import User from '../../../models/user.model';
 import OrderStatus from '../../../models/enum/order_status.enum';
-import { OrderShippingAddress } from '../../../models/order_shipping_address.model';
+import Address from '../../../models/address.model';
 import { PaginationResponseDto } from '../pagination.response.dto';
 import { Voucher } from '../../../models/voucher.model';
 
@@ -16,7 +16,7 @@ export class OrderResponseDto {
   createdAt: Date;
   updatedAt: Date;
   items: OrderItem[];
-  shippingAddress: OrderShippingAddress;
+  address: Address;
   isCOD: boolean;
   voucher?: Voucher | null;
   voucherCode?: string | null;

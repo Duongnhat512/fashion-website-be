@@ -151,7 +151,7 @@ export class InvoiceService implements IInvoiceService {
       .text(`Số điện thoại: ${order.user.phone || 'N/A'}`)
       .moveDown(0.5);
 
-    if (order.shippingAddress) {
+    if (order.address) {
       doc
         .fontSize(14)
         .font('Roboto-Bold')
@@ -161,11 +161,11 @@ export class InvoiceService implements IInvoiceService {
       doc
         .fontSize(11)
         .font('Roboto')
-        .text(`Người nhận: ${order.shippingAddress.fullName}`)
-        .text(`Số điện thoại: ${order.shippingAddress.phone}`)
-        .text(`Địa chỉ: ${order.shippingAddress.fullAddress}`)
+        .text(`Người nhận: ${order.address.fullName}`)
+        .text(`Số điện thoại: ${order.address.phone}`)
+        .text(`Địa chỉ: ${order.address.fullAddress}`)
         .text(
-          `${order.shippingAddress.ward}, ${order.shippingAddress.district}, ${order.shippingAddress.city}`,
+          `${order.address.ward}, ${order.address.district}, ${order.address.city}`,
         )
         .moveDown(0.5);
     }

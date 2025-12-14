@@ -10,7 +10,6 @@ import { ValidationErrorDto } from '../dtos/response/response.dto';
 import User from '../models/user.model';
 import { Variant } from '../models/variant.model';
 import { Product } from '../models/product.model';
-import { CreateOrderShippingAddressRequestDto } from '../dtos/request/order/order_shipping_address.request';
 import { CreateOrderItemRequestDto } from '../dtos/request/order/order_item.request';
 import OrderStatus from '../models/enum/order_status.enum';
 import { IVariantService } from '../services/product/variant.service.interface';
@@ -40,10 +39,8 @@ export class OrderController {
 
       createOrderDto.user = { id: req.body.user.id } as User;
 
-      if (req.body.shippingAddress) {
-        const shippingAddressDto = new CreateOrderShippingAddressRequestDto();
-        Object.assign(shippingAddressDto, req.body.shippingAddress);
-        createOrderDto.shippingAddress = shippingAddressDto;
+      if (req.body.addressId) {
+        createOrderDto.addressId = req.body.addressId;
       }
 
       if (req.body.items && req.body.items.length > 0) {

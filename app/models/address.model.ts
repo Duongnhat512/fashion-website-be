@@ -18,11 +18,14 @@ class Address {
   @JoinColumn({ name: 'user_id' })
   user!: User;
 
+  @Column({ type: 'varchar', length: 255, name: 'full_name' })
+  fullName!: string;
+
   @Column({ type: 'varchar', length: 255 })
   phone!: string;
 
-  @Column({ type: 'varchar', length: 255 })
-  address!: string;
+  @Column({ type: 'varchar', length: 500, name: 'full_address' })
+  fullAddress!: string;
 
   @Column({ type: 'varchar', length: 255 })
   city!: string;
