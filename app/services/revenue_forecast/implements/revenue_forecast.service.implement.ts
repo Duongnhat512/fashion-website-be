@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import Groq from 'groq-sdk';
 import { config } from '../../../config/env';
 import {
   IRevenueForecastService,
@@ -7,10 +7,9 @@ import {
 import { StatisticsRepository } from '../../../repositories/statistics.repository';
 import logger from '../../../utils/logger';
 import redis from '../../../config/redis.config';
-import { GeminiKeyManager } from '../../gemini_key_manager/implements/gemini_key_manager.service.implement';
 
 export class RevenueForecastService implements IRevenueForecastService {
-  private keyManager: GeminiKeyManager;
+  private groqClient: Groq;
   private statisticsRepository: StatisticsRepository;
 
   // Cache keys and TTL
@@ -23,7 +22,13 @@ export class RevenueForecastService implements IRevenueForecastService {
   };
 
   constructor() {
-    this.keyManager = new GeminiKeyManager(config.gemini.apiKeys);
+    // Initialize Groq client
+    if (!config.groq.apiKey) {
+      throw new Error('GROQ_API_KEY is required');
+    }
+    this.groqClient = new Groq({
+      apiKey: config.groq.apiKey,
+    });
     this.statisticsRepository = new StatisticsRepository();
   }
 
@@ -87,7 +92,7 @@ export class RevenueForecastService implements IRevenueForecastService {
       // Calculate trend and growth rate
       const { trend, growthRate } = this.calculateTrend(historicalData);
 
-      // Prepare prompt for Gemini (optimized - less data points)
+      // Prepare prompt for AI (optimized - less data points)
       const prompt = this.buildForecastPrompt(
         historicalData,
         totalRevenue,
@@ -97,8 +102,8 @@ export class RevenueForecastService implements IRevenueForecastService {
         period,
       );
 
-      // Get forecast from Gemini with key rotation and timeout
-      const forecastData = await this.getForecastFromGemini(
+      // Get forecast from Groq
+      const forecastData = await this.getForecastFromGroq(
         prompt,
         historicalData,
         totalRevenue,
@@ -114,7 +119,7 @@ export class RevenueForecastService implements IRevenueForecastService {
       return forecastData;
     } catch (error) {
       logger.error('Error generating revenue forecast:', error);
-      // Return fallback forecast if Gemini fails
+      // Return fallback forecast if Groq fails
       try {
         const totalRevenue = await this.statisticsRepository.getTotalRevenue();
         return this.generateFallbackForecast(period, totalRevenue);
@@ -178,9 +183,9 @@ export class RevenueForecastService implements IRevenueForecastService {
   }
 
   /**
-   * Get forecast from Gemini with key rotation and retry logic
+   * Get forecast from Groq
    */
-  private async getForecastFromGemini(
+  private async getForecastFromGroq(
     prompt: string,
     historicalData: Array<{ date: string; revenue: number; count: number }>,
     totalRevenue: number,
@@ -189,25 +194,8 @@ export class RevenueForecastService implements IRevenueForecastService {
     growthRate: number,
     period: 'week' | 'month' | 'quarter' | 'year',
   ): Promise<RevenueForecastResponse> {
-    const maxRetries = 3;
-    let lastError: Error | null = null;
-
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-      let apiKey: string | null = null;
-
-      try {
-        // Get available API key
-        apiKey = await this.keyManager.getAvailableKey();
-        if (!apiKey) {
-          throw new Error(
-            'No available Gemini API keys. All keys have reached daily limit.',
-          );
-        }
-
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({
-          model: config.gemini.model || 'gemini-2.5-flash',
-          systemInstruction: `
+    try {
+      const systemInstruction = `
             Bạn là một chuyên gia phân tích tài chính và dự báo doanh thu hàng đầu với hơn 15 năm kinh nghiệm trong lĩnh vực e-commerce và retail analytics.
 
             ## NHIỆM VỤ CHÍNH:
@@ -305,111 +293,67 @@ export class RevenueForecastService implements IRevenueForecastService {
             - Nếu xu hướng biến động lớn, hãy mở rộng range (min/max) hơn
             - Luôn xem xét correlation giữa số đơn hàng và doanh thu
             - Khi phân tích, hãy nghĩ như một CFO: cân nhắc cả opportunities và risks
-        `,
-        });
+        `;
 
-        // Set timeout: 30 seconds
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error('Gemini API timeout')), 30000);
-        });
-
-        // Call Gemini with timeout
-        const result = await Promise.race([
-          model.generateContent(prompt),
-          timeoutPromise,
-        ]);
-
-        const response = result.response;
-        const text = response.text();
-
-        // Mark key as used if successful
-        if (apiKey) {
-          await this.keyManager.markKeyUsedByKey(apiKey).catch((err) => {
-            logger.warn('Failed to mark key as used:', err);
-          });
-        }
-
-        // Parse Gemini response
-        return this.parseGeminiResponse(
-          text,
-          historicalData,
-          totalRevenue,
-          averageDailyRevenue,
-          trend,
-          growthRate,
-          period,
-        );
-      } catch (error: any) {
-        lastError = error;
-
-        // Check if it's a rate limit error
-        const isRateLimitError =
-          error.code === 429 ||
-          error.message?.includes('429') ||
-          error.message?.includes('quota') ||
-          error.message?.includes('rate limit') ||
-          error.message?.includes('RESOURCE_EXHAUSTED') ||
-          error.message === 'Gemini API timeout';
-
-        // Check if it's an API key error
-        const isApiKeyError =
-          error.message?.includes('API_KEY') ||
-          error.message?.includes('API key') ||
-          error.code === 401 ||
-          error.code === 403 ||
-          error.message?.includes('No available Gemini API keys');
-
-        if (isRateLimitError || isApiKeyError) {
-          // Mark key as used
-          if (apiKey) {
-            await this.keyManager.markKeyUsedByKey(apiKey).catch((err) => {
-              logger.warn('Failed to mark key as used:', err);
-            });
-          }
-
-          // Try next key if available
-          if (attempt < maxRetries - 1) {
-            logger.warn(
-              `Revenue forecast API key failed, trying next key... (attempt ${
-                attempt + 1
-              }/${maxRetries})`,
-            );
-            continue;
-          }
-        }
-
-        // For other errors, log and continue to fallback
-        logger.error(
-          `Error getting forecast from Gemini (attempt ${attempt + 1}):`,
+      // Call Groq API
+      const completion = await this.groqClient.chat.completions.create({
+        model: config.groq.model,
+        messages: [
           {
-            message: error.message,
-            code: error.code,
+            role: 'system',
+            content: systemInstruction,
           },
-        );
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 2000,
+      });
 
-        // If not rate limit error, don't retry
-        if (!isRateLimitError && !isApiKeyError) {
-          break;
-        }
+      const response = completion.choices[0]?.message;
+      if (!response || !response.content) {
+        throw new Error('No response from Groq API');
       }
-    }
 
-    // All retries failed - use fallback
-    logger.warn(
-      'All API keys failed for revenue forecast, using fallback calculation',
-    );
-    return this.generateFallbackForecast(
-      period,
-      totalRevenue,
-      historicalData,
-      averageDailyRevenue,
-      trend,
-      growthRate,
-    );
+      const text = response.content;
+
+      // Parse response (method name can stay the same as it just parses JSON)
+      return this.parseGeminiResponse(
+        text,
+        historicalData,
+        totalRevenue,
+        averageDailyRevenue,
+        trend,
+        growthRate,
+        period,
+      );
+    } catch (error: any) {
+      // Log error
+      logger.error('Error getting forecast from Groq:', {
+        message: error.message,
+        code: error.code,
+      });
+
+      // Use fallback calculation if API fails
+      logger.warn(
+        'Groq API failed for revenue forecast, using fallback calculation',
+      );
+
+      return this.generateFallbackForecast(
+        period,
+        totalRevenue,
+        historicalData,
+        averageDailyRevenue,
+        trend,
+        growthRate,
+      );
+    }
   }
 
   /**
-   * Build prompt for Gemini AI
+   * Build prompt for AI forecast
    */
   private buildForecastPrompt(
     historicalData: Array<{ date: string; revenue: number; count: number }>,
@@ -497,7 +441,7 @@ Hãy phân tích và trả về kết quả dưới dạng JSON với cấu trú
   }
 
   /**
-   * Parse Gemini response and build forecast response
+   * Parse AI response (Groq/Gemini) and build forecast response
    */
   private parseGeminiResponse(
     text: string,
@@ -509,7 +453,7 @@ Hãy phân tích và trả về kết quả dưới dạng JSON với cấu trú
     period: 'week' | 'month' | 'quarter' | 'year',
   ): RevenueForecastResponse {
     try {
-      // Extract JSON from Gemini response (might have markdown formatting)
+      // Extract JSON from AI response (might have markdown formatting)
       let jsonStr = text.trim();
 
       // Remove markdown code blocks if present
@@ -581,7 +525,7 @@ Hãy phân tích và trả về kết quả dưới dạng JSON với cấu trú
         },
       };
     } catch (error) {
-      logger.error('Error parsing Gemini response, using fallback:', error);
+      logger.error('Error parsing AI response, using fallback:', error);
       // Fallback to simple calculation
       return this.generateFallbackForecast(
         period,
@@ -651,7 +595,7 @@ Hãy phân tích và trả về kết quả dưới dạng JSON với cấu trú
   }
 
   /**
-   * Generate fallback forecast if Gemini fails
+   * Generate fallback forecast if AI API fails
    */
   private generateFallbackForecast(
     period: 'week' | 'month' | 'quarter' | 'year',
