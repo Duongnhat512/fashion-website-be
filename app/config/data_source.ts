@@ -9,7 +9,6 @@ import { Variant } from '../models/variant.model';
 import { Color } from '../models/color.model';
 import { Order } from '../models/order.model';
 import { OrderItem } from '../models/order_item.model';
-import { OrderShippingAddress } from '../models/order_shipping_address.model';
 import { Warehouse } from '../models/warehouse.model';
 import { StockEntry } from '../models/stock_entry.model';
 import { Inventory } from '../models/inventory.model';
@@ -41,7 +40,6 @@ export const AppDataSource = new DataSource({
     Variant,
     Order,
     OrderItem,
-    OrderShippingAddress,
     Warehouse,
     StockEntry,
     Inventory,

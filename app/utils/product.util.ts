@@ -20,7 +20,6 @@ export function removeSearchFields(product: any): any {
 
   const searchFields = [
     'embedding',
-    'embedding_json',
     'shortDescriptionNormalized',
     'nameNormalized',
     'brandNormalized',

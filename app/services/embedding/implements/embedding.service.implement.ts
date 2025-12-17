@@ -2,14 +2,16 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { config } from '../../../config/env';
 import { IEmbeddingService } from '../embedding.service.interface';
 import logger from '../../../utils/logger';
-import { GeminiKeyManager } from '../../gemini_key_manager/implements/gemini_key_manager.service.implement';
 
 export class EmbeddingService implements IEmbeddingService {
-  private keyManager: GeminiKeyManager;
+  private genAI: GoogleGenerativeAI;
 
   constructor() {
-    // Initialize key manager with all available keys
-    this.keyManager = new GeminiKeyManager(config.gemini.apiKeys);
+    // Initialize Gemini AI client with API key
+    if (!config.gemini.apiKey) {
+      throw new Error('GEMINI_API_KEY is required');
+    }
+    this.genAI = new GoogleGenerativeAI(config.gemini.apiKey);
   }
 
   /**
@@ -19,134 +21,64 @@ export class EmbeddingService implements IEmbeddingService {
    * if there's a critical error (like network failure or invalid API key)
    */
   async generateEmbedding(text: string): Promise<number[]> {
-    const maxRetries = 3; // Try up to 3 different keys
-    let lastError: Error | null = null;
-
     // Validate input
     if (!text || text.trim().length === 0) {
       logger.warn('Empty text provided for embedding, using zero vector');
       return new Array(768).fill(0);
     }
 
-    // Try with different API keys if one fails
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-      let genAI: GoogleGenerativeAI | null = null;
-      let apiKey: string | null = null;
+    try {
+      // Sử dụng model embedding chuyên dụng text-embedding-004
+      // Model này trả về vector 768 chiều
+      const embeddingModel = this.genAI.getGenerativeModel({
+        model: 'text-embedding-004',
+      });
 
-      try {
-        // Get available API key
-        apiKey = await this.keyManager.getAvailableKey();
-        if (!apiKey) {
-          throw new Error(
-            'No available Gemini API keys. All keys have reached daily limit.',
+      const result = await embeddingModel.embedContent(text);
+      const embedding = result.embedding;
+
+      // Đảm bảo vector có đúng 768 chiều
+      if (embedding.values && embedding.values.length > 0) {
+        const vector = embedding.values;
+
+        // Nếu vector không đủ 768 chiều, pad với 0
+        if (vector.length < 768) {
+          logger.warn(
+            `Embedding vector has ${vector.length} dimensions, padding to 768`,
           );
+          return [...vector, ...new Array(768 - vector.length).fill(0)];
         }
 
-        genAI = new GoogleGenerativeAI(apiKey);
-
-        // Sử dụng model embedding chuyên dụng text-embedding-004
-        // Model này trả về vector 768 chiều
-        const embeddingModel = genAI.getGenerativeModel({
-          model: 'text-embedding-004',
-        });
-
-        const result = await embeddingModel.embedContent(text);
-        const embedding = result.embedding;
-
-        // Mark key as used if successful
-        if (apiKey) {
-          await this.keyManager.markKeyUsedByKey(apiKey).catch((err) => {
-            logger.warn('Failed to mark key as used:', err);
-          });
-        }
-
-        // Đảm bảo vector có đúng 768 chiều
-        if (embedding.values && embedding.values.length > 0) {
-          const vector = embedding.values;
-
-          // Nếu vector không đủ 768 chiều, pad với 0
-          if (vector.length < 768) {
-            logger.warn(
-              `Embedding vector has ${vector.length} dimensions, padding to 768`,
-            );
-            return [...vector, ...new Array(768 - vector.length).fill(0)];
-          }
-
-          // Nếu vector quá dài, cắt bớt
-          if (vector.length > 768) {
-            logger.warn(
-              `Embedding vector has ${vector.length} dimensions, truncating to 768`,
-            );
-            return vector.slice(0, 768);
-          }
-
-          // Normalize vector for cosine similarity
-          const magnitude = Math.sqrt(
-            vector.reduce((sum, val) => sum + val * val, 0),
+        // Nếu vector quá dài, cắt bớt
+        if (vector.length > 768) {
+          logger.warn(
+            `Embedding vector has ${vector.length} dimensions, truncating to 768`,
           );
-          if (magnitude > 0) {
-            return vector.map((val) => val / magnitude);
-          }
-
-          return vector;
+          return vector.slice(0, 768);
         }
 
-        throw new Error('Empty embedding returned from API');
-      } catch (error: any) {
-        lastError = error;
-
-        // Check if it's a rate limit error (429) or quota exceeded
-        const isRateLimitError =
-          error.code === 429 ||
-          error.message?.includes('429') ||
-          error.message?.includes('quota') ||
-          error.message?.includes('rate limit') ||
-          error.message?.includes('RESOURCE_EXHAUSTED');
-
-        // Check if it's an API key error
-        const isApiKeyError =
-          error.message?.includes('API_KEY') ||
-          error.message?.includes('API key') ||
-          error.code === 401 ||
-          error.code === 403;
-
-        if (isRateLimitError || isApiKeyError) {
-          // Mark key as used (even though it failed, it counted towards quota)
-          if (apiKey) {
-            await this.keyManager.markKeyUsedByKey(apiKey).catch((err) => {
-              logger.warn('Failed to mark key as used:', err);
-            });
-          }
-
-          // Try next key if available
-          if (attempt < maxRetries - 1) {
-            logger.warn(
-              `API key failed (rate limit/error), trying next key... (attempt ${
-                attempt + 1
-              }/${maxRetries})`,
-            );
-            continue; // Try next key
-          }
+        // Normalize vector for cosine similarity
+        const magnitude = Math.sqrt(
+          vector.reduce((sum, val) => sum + val * val, 0),
+        );
+        if (magnitude > 0) {
+          return vector.map((val) => val / magnitude);
         }
 
-        // For other errors, log and continue to fallback
-        logger.error(`Error generating embedding (attempt ${attempt + 1}):`, {
-          message: error.message,
-          code: error.code,
-        });
-
-        // If not rate limit error, don't retry with other keys
-        if (!isRateLimitError && !isApiKeyError) {
-          break;
-        }
+        return vector;
       }
-    }
 
-    // All retries failed - use fallback
-    logger.warn(
-      'All API keys failed or exhausted, using fallback embedding generation',
-    );
-    return this.createSimpleEmbedding(text);
+      throw new Error('Empty embedding returned from API');
+    } catch (error: any) {
+      // Log error and fallback to simple embedding
+      logger.error('Error generating embedding:', {
+        message: error.message,
+        code: error.code,
+      });
+
+      logger.warn('Using fallback embedding generation');
+      return this.createSimpleEmbedding(text);
+    }
   }
 
   /**
