@@ -24,7 +24,6 @@ export class CreateAddressRequestDto {
   city!: string;
 
   @IsString()
-  @IsNotEmpty({ message: 'Quận/Huyện không được để trống' })
   district!: string;
 
   @IsString()
@@ -62,7 +61,6 @@ export class UpdateAddressRequestDto {
 
   @IsOptional()
   @IsString()
-  @IsNotEmpty({ message: 'Quận/Huyện không được để trống' })
   district?: string;
 
   @IsOptional()
