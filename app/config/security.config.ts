@@ -9,7 +9,7 @@ export const securityConfig = {
       'https://fashion-website-fe1.vercel.app', // Production frontend
       'https://*.vercel.app', // Vercel preview domains
       ...(config.nodeEnv === 'development'
-        ? ['http://localhost:3636', 'http://localhost:5173']
+        ? ['http://localhost:3636', 'http://localhost:5173','http://localhost:3000']
         : []),
     ],
     credentials: true,

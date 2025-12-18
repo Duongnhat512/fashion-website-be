@@ -17,7 +17,7 @@ export class AddressController {
 
   createAddress = async (req: Request, res: Response): Promise<void> => {
     try {
-      const userId = (req as any).user?.id;
+      const userId = req.user?.userId;
       if (!userId) {
         res.status(401).json(ApiResponse.error('Chưa đăng nhập'));
         return;
@@ -58,7 +58,7 @@ export class AddressController {
 
   updateAddress = async (req: Request, res: Response): Promise<void> => {
     try {
-      const userId = (req as any).user?.id;
+      const userId = req.user?.userId;
       if (!userId) {
         res.status(401).json(ApiResponse.error('Chưa đăng nhập'));
         return;
@@ -100,7 +100,7 @@ export class AddressController {
 
   deleteAddress = async (req: Request, res: Response): Promise<void> => {
     try {
-      const userId = (req as any).user?.id;
+      const userId = req.user?.userId;
       if (!userId) {
         res.status(401).json(ApiResponse.error('Chưa đăng nhập'));
         return;
@@ -123,7 +123,7 @@ export class AddressController {
 
   getAddressById = async (req: Request, res: Response): Promise<void> => {
     try {
-      const userId = (req as any).user?.id;
+      const userId = req.user?.userId;
       if (!userId) {
         res.status(401).json(ApiResponse.error('Chưa đăng nhập'));
         return;
@@ -151,7 +151,7 @@ export class AddressController {
 
   getAddressesByUserId = async (req: Request, res: Response): Promise<void> => {
     try {
-      const userId = (req as any).user?.id;
+      const userId = req.user?.userId;
       if (!userId) {
         res.status(401).json(ApiResponse.error('Chưa đăng nhập'));
         return;
@@ -177,7 +177,7 @@ export class AddressController {
 
   setDefaultAddress = async (req: Request, res: Response): Promise<void> => {
     try {
-      const userId = (req as any).user?.id;
+      const userId = req.user?.userId;
       if (!userId) {
         res.status(401).json(ApiResponse.error('Chưa đăng nhập'));
         return;
